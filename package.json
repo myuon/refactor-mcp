@@ -8,12 +8,16 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "format": "prettier --write src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts",
+    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts tests/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts tests/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts tests/**/*.ts",
     "type-check": "tsc --noEmit",
-    "check": "npm run type-check && npm run lint && npm run format:check"
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "check": "npm run type-check && npm run lint && npm run format:check && npm run test:run"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
@@ -24,12 +28,14 @@
     "@eslint/js": "^9.30.0",
     "@types/eslint__js": "^8.42.3",
     "@types/node": "^20.0.0",
+    "@vitest/ui": "^3.2.4",
     "eslint": "^9.30.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.5.1",
     "prettier": "^3.6.2",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
-    "typescript-eslint": "^8.35.0"
+    "typescript-eslint": "^8.35.0",
+    "vitest": "^3.2.4"
   }
 }

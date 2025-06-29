@@ -13,10 +13,20 @@ export default tseslint.config(
       sourceType: 'module',
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  },
+  {
+    files: ['tests/**/*.ts', '**/*.test.ts', '**/*.spec.ts'],
+    rules: {
+      // Allow any for test utilities and mocks
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
   {

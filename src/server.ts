@@ -10,7 +10,7 @@ const server = new McpServer({
 });
 
 // Helper function to search files based on pattern
-async function searchFiles(filePattern?: string): Promise<string[]> {
+export async function searchFiles(filePattern?: string): Promise<string[]> {
   if (!filePattern) {
     // Default to all files in current directory and subdirectories
     return await glob('**/*', {
@@ -25,7 +25,7 @@ async function searchFiles(filePattern?: string): Promise<string[]> {
 }
 
 // Helper function to read file content safely
-function readFileContent(filePath: string): string {
+export function readFileContent(filePath: string): string {
   try {
     return readFileSync(filePath, 'utf-8');
   } catch (error) {
@@ -34,7 +34,7 @@ function readFileContent(filePath: string): string {
 }
 
 // Helper function to write file content safely
-function writeFileContent(filePath: string, content: string): void {
+export function writeFileContent(filePath: string, content: string): void {
   try {
     writeFileSync(filePath, content, 'utf-8');
   } catch (error) {
