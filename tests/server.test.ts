@@ -211,6 +211,91 @@ const result = foo(1, 2);`;
       expect(firstMatchLine).toBe(1); // function foo(a, b) on line 1
     });
 
+    test('should recursively search through nested directories and return proper file paths', async () => {
+      // Create deep nested structure with search targets
+      mkdirSync('search-test', { recursive: true });
+      mkdirSync('search-test/deep', { recursive: true });
+      mkdirSync('search-test/deep/nested', { recursive: true });
+      mkdirSync('search-test/side-branch', { recursive: true });
+
+      const content1 = `function targetFunction() {
+  return "found in root";
+}`;
+      const content2 = `class MyClass {
+  targetFunction() {
+    return "found in deep";
+  }
+}`;
+      const content3 = `const targetFunction = () => {
+  return "found in nested";
+};`;
+      const content4 = `// targetFunction comment
+function anotherFunction() {
+  targetFunction();
+}`;
+
+      writeFileSync('search-test/root.js', content1, 'utf-8');
+      writeFileSync('search-test/deep/deep.js', content2, 'utf-8');
+      writeFileSync('search-test/deep/nested/nested.js', content3, 'utf-8');
+      writeFileSync('search-test/side-branch/side.js', content4, 'utf-8');
+
+      // Test recursive search across all files
+      const files = await searchFiles('**/search-test/**/*.js');
+      expect(files.length).toBe(4);
+
+      // Test pattern search in all files
+      const searchPattern = 'targetFunction';
+      const regex = new RegExp(searchPattern, 'gm');
+
+      const searchResults = [];
+      for (const filePath of files) {
+        const content = readFileSync(filePath, 'utf-8');
+        const matches = [...content.matchAll(regex)];
+
+        if (matches.length > 0) {
+          const lineNumbers = [];
+          for (const match of matches) {
+            const beforeMatch = content.substring(0, match.index!);
+            const lineNumber = beforeMatch.split('\n').length;
+            lineNumbers.push(lineNumber);
+          }
+
+          const firstLine = lineNumbers[0];
+          const lastLine = lineNumbers[lineNumbers.length - 1];
+
+          if (firstLine === lastLine) {
+            searchResults.push(`${filePath} (line: ${firstLine})`);
+          } else {
+            searchResults.push(`${filePath} (lines: ${firstLine}-${lastLine})`);
+          }
+        }
+      }
+
+      // Should find targetFunction in all 4 files
+      expect(searchResults.length).toBe(4);
+      expect(
+        searchResults.some(result => result.includes('search-test/root.js'))
+      ).toBe(true);
+      expect(
+        searchResults.some(result =>
+          result.includes('search-test/deep/deep.js')
+        )
+      ).toBe(true);
+      expect(
+        searchResults.some(result =>
+          result.includes('search-test/deep/nested/nested.js')
+        )
+      ).toBe(true);
+      expect(
+        searchResults.some(result =>
+          result.includes('search-test/side-branch/side.js')
+        )
+      ).toBe(true);
+
+      // Clean up
+      rmSync('search-test', { recursive: true, force: true });
+    });
+
     test('should work with context pattern in search', () => {
       const content = `import { foo } from 'lib';
 
@@ -310,6 +395,102 @@ line 8`;
       expect(jsFiles.some(file => file.includes('.js'))).toBe(true);
       expect(tsFiles.some(file => file.includes('.ts'))).toBe(true);
       expect(goFiles.some(file => file.includes('.go'))).toBe(true);
+    });
+
+    test('should recursively search through multiple nested directories', async () => {
+      // Create deep nested directory structure
+      mkdirSync('level1', { recursive: true });
+      mkdirSync('level1/level2', { recursive: true });
+      mkdirSync('level1/level2/level3', { recursive: true });
+      mkdirSync('level1/another-branch', { recursive: true });
+
+      // Create files at different levels with search pattern
+      writeFileSync(
+        'level1/file1.js',
+        'function searchMe() { return "level1"; }',
+        'utf-8'
+      );
+      writeFileSync(
+        'level1/level2/file2.js',
+        'const searchMe = "level2";',
+        'utf-8'
+      );
+      writeFileSync(
+        'level1/level2/level3/file3.js',
+        'var searchMe = "level3";',
+        'utf-8'
+      );
+      writeFileSync(
+        'level1/another-branch/file4.js',
+        'let searchMe = "another-branch";',
+        'utf-8'
+      );
+
+      // Test recursive search
+      const allJsFiles = await searchFiles('**/level1/**/*.js');
+      expect(allJsFiles.length).toBe(4);
+      expect(allJsFiles.some(file => file.includes('level1/file1.js'))).toBe(
+        true
+      );
+      expect(
+        allJsFiles.some(file => file.includes('level1/level2/file2.js'))
+      ).toBe(true);
+      expect(
+        allJsFiles.some(file => file.includes('level1/level2/level3/file3.js'))
+      ).toBe(true);
+      expect(
+        allJsFiles.some(file => file.includes('level1/another-branch/file4.js'))
+      ).toBe(true);
+
+      // Test pattern search across nested files
+      const searchPattern = 'searchMe';
+      const regex = new RegExp(searchPattern, 'gm');
+
+      let matchingFiles = 0;
+      for (const filePath of allJsFiles) {
+        const content = readFileSync(filePath, 'utf-8');
+        const matches = content.match(regex);
+        if (matches && matches.length > 0) {
+          matchingFiles++;
+        }
+      }
+
+      expect(matchingFiles).toBe(4); // All files should contain 'searchMe'
+
+      // Clean up
+      rmSync('level1', { recursive: true, force: true });
+    });
+
+    test('should respect file pattern filters in recursive search', async () => {
+      // Create mixed file types in nested structure
+      mkdirSync('mixed', { recursive: true });
+      mkdirSync('mixed/js', { recursive: true });
+      mkdirSync('mixed/ts', { recursive: true });
+      mkdirSync('mixed/other', { recursive: true });
+
+      writeFileSync('mixed/js/app.js', 'const target = "js";', 'utf-8');
+      writeFileSync('mixed/ts/app.ts', 'const target: string = "ts";', 'utf-8');
+      writeFileSync('mixed/other/app.py', 'target = "python"', 'utf-8');
+      writeFileSync('mixed/other/app.go', 'var target = "go"', 'utf-8');
+
+      // Test specific file pattern filters
+      const jsFiles = await searchFiles('**/mixed/**/*.js');
+      const tsFiles = await searchFiles('**/mixed/**/*.ts');
+      const pyFiles = await searchFiles('**/mixed/**/*.py');
+      const goFiles = await searchFiles('**/mixed/**/*.go');
+
+      expect(jsFiles.length).toBe(1);
+      expect(tsFiles.length).toBe(1);
+      expect(pyFiles.length).toBe(1);
+      expect(goFiles.length).toBe(1);
+
+      expect(jsFiles[0]).toContain('app.js');
+      expect(tsFiles[0]).toContain('app.ts');
+      expect(pyFiles[0]).toContain('app.py');
+      expect(goFiles[0]).toContain('app.go');
+
+      // Clean up
+      rmSync('mixed', { recursive: true, force: true });
     });
 
     test('should handle complex regex patterns from spec examples', () => {
