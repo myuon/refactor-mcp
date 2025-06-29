@@ -12,6 +12,7 @@ import {
   readFileContent,
   writeFileContent,
   searchFiles,
+  groupConsecutiveLines,
 } from '../src/server.js';
 
 describe('MCP Refactor Server', () => {
@@ -71,6 +72,39 @@ describe('MCP Refactor Server', () => {
 
       const results = await searchFiles('test-*.js');
       expect(results).toContain(testFilePath);
+    });
+
+    test('groupConsecutiveLines should group consecutive numbers', () => {
+      // Single line
+      expect(groupConsecutiveLines([5])).toEqual(['line: 5']);
+
+      // All consecutive
+      expect(groupConsecutiveLines([1, 2, 3, 4, 5])).toEqual(['lines: 1-5']);
+
+      // Mixed consecutive and non-consecutive
+      expect(groupConsecutiveLines([1, 2, 3, 5, 7, 8, 9, 12])).toEqual([
+        'lines: 1-3',
+        'line: 5',
+        'lines: 7-9',
+        'line: 12',
+      ]);
+
+      // No consecutive numbers
+      expect(groupConsecutiveLines([1, 3, 5, 7])).toEqual([
+        'line: 1',
+        'line: 3',
+        'line: 5',
+        'line: 7',
+      ]);
+
+      // Two consecutive groups
+      expect(groupConsecutiveLines([1, 2, 5, 6])).toEqual([
+        'lines: 1-2',
+        'lines: 5-6',
+      ]);
+
+      // Empty array
+      expect(groupConsecutiveLines([])).toEqual([]);
     });
   });
 
@@ -357,19 +391,43 @@ line 8`;
 
       expect(lineNumbers).toEqual([2, 5, 7]);
 
-      // Test line range formatting
-      const firstLine = lineNumbers[0];
+      // Test line range formatting with new grouping logic
+      const groupedLines = groupConsecutiveLines(lineNumbers);
+      expect(`test-file.js (${groupedLines.join(', ')})`).toBe(
+        'test-file.js (line: 2, line: 5, line: 7)'
+      );
+    });
 
-      if (lineNumbers.length === 1) {
-        expect(`test-file.js (line: ${firstLine})`).toBe(
-          'test-file.js (line: 2)'
-        );
-      } else {
-        const linesList = lineNumbers.map(line => `line: ${line}`).join(', ');
-        expect(`test-file.js (${linesList})`).toBe(
-          'test-file.js (line: 2, line: 5, line: 7)'
-        );
+    test('should group consecutive line numbers in search results', () => {
+      const content = `line 1
+foo(1)
+foo(2)
+foo(3)
+line 5
+foo(4)
+line 7
+foo(5)
+foo(6)`;
+
+      writeFileSync(testFilePath, content, 'utf-8');
+
+      const searchPattern = 'foo\\(';
+      const matches = [...content.matchAll(new RegExp(searchPattern, 'gm'))];
+      const lineNumbers: number[] = [];
+
+      for (const match of matches) {
+        const beforeMatch = content.substring(0, match.index!);
+        const lineNumber = beforeMatch.split('\n').length;
+        lineNumbers.push(lineNumber);
       }
+
+      expect(lineNumbers).toEqual([2, 3, 4, 6, 8, 9]);
+
+      // Test consecutive grouping
+      const groupedLines = groupConsecutiveLines(lineNumbers);
+      expect(`test-file.js (${groupedLines.join(', ')})`).toBe(
+        'test-file.js (lines: 2-4, line: 6, lines: 8-9)'
+      );
     });
   });
 

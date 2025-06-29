@@ -63,6 +63,41 @@ export function writeFileContent(filePath: string, content: string): void {
   }
 }
 
+// Helper function to group consecutive line numbers
+export function groupConsecutiveLines(lineNumbers: number[]): string[] {
+  if (lineNumbers.length === 0) return [];
+  if (lineNumbers.length === 1) return [`line: ${lineNumbers[0]}`];
+
+  const groups: string[] = [];
+  let start = lineNumbers[0];
+  let end = lineNumbers[0];
+
+  for (let i = 1; i < lineNumbers.length; i++) {
+    if (lineNumbers[i] === end + 1) {
+      // Consecutive number, extend the range
+      end = lineNumbers[i];
+    } else {
+      // Non-consecutive, finalize the current group
+      if (start === end) {
+        groups.push(`line: ${start}`);
+      } else {
+        groups.push(`lines: ${start}-${end}`);
+      }
+      start = lineNumbers[i];
+      end = lineNumbers[i];
+    }
+  }
+
+  // Add the last group
+  if (start === end) {
+    groups.push(`line: ${start}`);
+  } else {
+    groups.push(`lines: ${start}-${end}`);
+  }
+
+  return groups;
+}
+
 server.registerTool(
   'code_refactor',
   {
@@ -253,14 +288,8 @@ server.registerTool(
           const uniqueLineNumbers = [...new Set(validMatches.map(m => m.line))];
           const lineNumbers = uniqueLineNumbers.sort((a, b) => a - b);
 
-          if (lineNumbers.length === 1) {
-            results.push(`${filePath} (line: ${lineNumbers[0]})`);
-          } else {
-            const linesList = lineNumbers
-              .map(line => `line: ${line}`)
-              .join(', ');
-            results.push(`${filePath} (${linesList})`);
-          }
+          const groupedLines = groupConsecutiveLines(lineNumbers);
+          results.push(`${filePath} (${groupedLines.join(', ')})`);
         }
       }
 
