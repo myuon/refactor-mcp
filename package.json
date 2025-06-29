@@ -1,9 +1,38 @@
 {
-  "name": "refactor-mcp",
+  "name": "@myuon/refactor-mcp",
   "version": "1.0.0",
   "description": "MCP server for refactoring tools",
   "main": "dist/server.js",
   "type": "module",
+  "bin": {
+    "refactor-mcp": "dist/server.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "CLAUDE.md"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "refactoring",
+    "code-transformation",
+    "regex",
+    "search-replace"
+  ],
+  "author": "myuon",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/myuon/refactor-mcp.git"
+  },
+  "homepage": "https://github.com/myuon/refactor-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/myuon/refactor-mcp/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
@@ -17,7 +46,8 @@
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "check": "npm run type-check && npm run lint && npm run format:check && npm run test:run"
+    "check": "npm run type-check && npm run lint && npm run format:check && npm run test:run",
+    "prepublishOnly": "npm run check && npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

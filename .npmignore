@@ -1,0 +1,14 @@
+src/
+tests/
+docs/
+node_modules/
+.git/
+.gitignore
+.prettierrc
+.prettierignore
+eslint.config.js
+vitest.config.ts
+tsconfig.json
+package-lock.json
+*.log
+.DS_Store
