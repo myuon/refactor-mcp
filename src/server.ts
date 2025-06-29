@@ -3,7 +3,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, statSync } from 'fs';
 import { glob } from 'glob';
 
 const server = new McpServer({
@@ -20,7 +20,26 @@ export async function searchFiles(filePattern?: string): Promise<string[]> {
       nodir: true,
     });
   }
-  return await glob(filePattern, {
+
+  let pattern = filePattern;
+
+  // Check if the pattern is a directory without glob syntax
+  if (
+    !pattern.includes('*') &&
+    !pattern.includes('?') &&
+    !pattern.includes('[')
+  ) {
+    try {
+      if (existsSync(pattern) && statSync(pattern).isDirectory()) {
+        // If it's a directory, append /** to search all files in it
+        pattern = pattern.endsWith('/') ? `${pattern}**` : `${pattern}/**`;
+      }
+    } catch {
+      // If stat fails, use the pattern as-is
+    }
+  }
+
+  return await glob(pattern, {
     ignore: ['node_modules/**', 'dist/**', '.git/**'],
     nodir: true,
   });

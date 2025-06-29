@@ -534,5 +534,60 @@ const legacy_sdk = "not in import";`;
         }
       }
     });
+
+    test('should support directory-only patterns', async () => {
+      // Create test directory structure
+      mkdirSync(`${testDir}/app`, { recursive: true });
+      mkdirSync(`${testDir}/app/components`, { recursive: true });
+      mkdirSync(`${testDir}/utils`, { recursive: true });
+
+      // Create test files in test directories
+      writeFileSync(
+        `${testDir}/app/index.js`,
+        'const main = "entry";',
+        'utf-8'
+      );
+      writeFileSync(
+        `${testDir}/app/utils.js`,
+        'const util = "helper";',
+        'utf-8'
+      );
+      writeFileSync(
+        `${testDir}/app/components/Button.js`,
+        'const Button = "component";',
+        'utf-8'
+      );
+      writeFileSync(
+        `${testDir}/utils/helper.js`,
+        'const helper = "util";',
+        'utf-8'
+      );
+      writeFileSync(`${testDir}/root.js`, 'const root = "root";', 'utf-8');
+
+      // Test directory pattern without glob syntax
+      const appFiles = await searchFiles(`${testDir}/app`);
+      const utilFiles = await searchFiles(`${testDir}/utils`);
+      const componentFiles = await searchFiles(`${testDir}/app/components`);
+
+      // Should find all files in app directory and subdirectories
+      expect(appFiles.filter(f => f.includes('/app/')).length).toBe(3);
+      expect(appFiles).toContain(`${testDir}/app/index.js`);
+      expect(appFiles).toContain(`${testDir}/app/utils.js`);
+      expect(appFiles).toContain(`${testDir}/app/components/Button.js`);
+
+      // Should find files in utils directory
+      expect(utilFiles.filter(f => f.includes('/utils/')).length).toBe(1);
+      expect(utilFiles).toContain(`${testDir}/utils/helper.js`);
+
+      // Should find files in nested directory
+      expect(
+        componentFiles.filter(f => f.includes('/app/components/')).length
+      ).toBe(1);
+      expect(componentFiles).toContain(`${testDir}/app/components/Button.js`);
+
+      // Should not include root files
+      expect(appFiles).not.toContain(`${testDir}/root.js`);
+      expect(utilFiles).not.toContain(`${testDir}/root.js`);
+    });
   });
 });
