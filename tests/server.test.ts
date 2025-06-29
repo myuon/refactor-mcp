@@ -55,14 +55,14 @@ describe('MCP Refactor Server', () => {
         name: 'should read file correctly',
         test: 'readFileContent',
         content: 'const x = 1;\nconst y = 2;',
-        expected: 'const x = 1;\nconst y = 2;'
+        expected: 'const x = 1;\nconst y = 2;',
       },
       {
         name: 'should write file correctly',
         test: 'writeFileContent',
         content: 'const z = 3;',
-        expected: 'const z = 3;'
-      }
+        expected: 'const z = 3;',
+      },
     ];
 
     helperTestCases.forEach(({ name, test, content, expected }) => {
@@ -91,33 +91,33 @@ describe('MCP Refactor Server', () => {
       {
         name: 'should handle single line',
         input: [5],
-        expected: ['line: 5']
+        expected: ['line: 5'],
       },
       {
         name: 'should handle all consecutive',
         input: [1, 2, 3, 4, 5],
-        expected: ['lines: 1-5']
+        expected: ['lines: 1-5'],
       },
       {
         name: 'should handle mixed consecutive and non-consecutive',
         input: [1, 2, 3, 5, 7, 8, 9, 12],
-        expected: ['lines: 1-3', 'line: 5', 'lines: 7-9', 'line: 12']
+        expected: ['lines: 1-3', 'line: 5', 'lines: 7-9', 'line: 12'],
       },
       {
         name: 'should handle no consecutive numbers',
         input: [1, 3, 5, 7],
-        expected: ['line: 1', 'line: 3', 'line: 5', 'line: 7']
+        expected: ['line: 1', 'line: 3', 'line: 5', 'line: 7'],
       },
       {
         name: 'should handle two consecutive groups',
         input: [1, 2, 5, 6],
-        expected: ['lines: 1-2', 'lines: 5-6']
+        expected: ['lines: 1-2', 'lines: 5-6'],
       },
       {
         name: 'should handle empty array',
         input: [],
-        expected: []
-      }
+        expected: [],
+      },
     ];
 
     groupConsecutiveLinesTestCases.forEach(({ name, input, expected }) => {
@@ -134,26 +134,28 @@ describe('MCP Refactor Server', () => {
         content: 'const foo = 1;\nconst foo = 2;',
         searchPattern: 'foo',
         replacePattern: 'bar',
-        expected: 'const bar = 1;\nconst bar = 2;'
+        expected: 'const bar = 1;\nconst bar = 2;',
       },
       {
         name: 'regex with capture groups should work',
         content: 'foo(1,2,3);\nfoo("hello");',
         searchPattern: 'foo\\((.+)\\)',
         replacePattern: 'bar($1)',
-        expected: 'bar(1,2,3);\nbar("hello");'
-      }
+        expected: 'bar(1,2,3);\nbar("hello");',
+      },
     ];
 
-    regexTestCases.forEach(({ name, content, searchPattern, replacePattern, expected }) => {
-      test(name, () => {
-        const result = content.replace(
-          new RegExp(searchPattern, 'g'),
-          replacePattern
-        );
-        expect(result).toBe(expected);
-      });
-    });
+    regexTestCases.forEach(
+      ({ name, content, searchPattern, replacePattern, expected }) => {
+        test(name, () => {
+          const result = content.replace(
+            new RegExp(searchPattern, 'g'),
+            replacePattern
+          );
+          expect(result).toBe(expected);
+        });
+      }
+    );
   });
 
   describe('Code Refactor Tool', () => {
@@ -163,22 +165,24 @@ describe('MCP Refactor Server', () => {
         content: 'let k = foo(1,2,3);\nlet m = foo("hi");',
         searchPattern: 'foo\\((.+)\\)',
         replacePattern: 'bar($1)',
-        expected: 'let k = bar(1,2,3);\nlet m = bar("hi");'
-      }
+        expected: 'let k = bar(1,2,3);\nlet m = bar("hi");',
+      },
     ];
 
-    refactorTestCases.forEach(({ name, content, searchPattern, replacePattern, expected }) => {
-      test(name, () => {
-        writeFileSync(testFilePath, content, 'utf-8');
-        const newContent = content.replace(
-          new RegExp(searchPattern, 'g'),
-          replacePattern
-        );
-        writeFileSync(testFilePath, newContent, 'utf-8');
-        const result = readFileSync(testFilePath, 'utf-8');
-        expect(result).toBe(expected);
-      });
-    });
+    refactorTestCases.forEach(
+      ({ name, content, searchPattern, replacePattern, expected }) => {
+        test(name, () => {
+          writeFileSync(testFilePath, content, 'utf-8');
+          const newContent = content.replace(
+            new RegExp(searchPattern, 'g'),
+            replacePattern
+          );
+          writeFileSync(testFilePath, newContent, 'utf-8');
+          const result = readFileSync(testFilePath, 'utf-8');
+          expect(result).toBe(expected);
+        });
+      }
+    );
 
     test('should work with context pattern filtering', () => {
       const content = `import (
@@ -406,7 +410,7 @@ line 6
 foo(3)
 line 8`,
         expectedLines: [2, 5, 7],
-        expectedFormat: 'test-file.js (line: 2, line: 5, line: 7)'
+        expectedFormat: 'test-file.js (line: 2, line: 5, line: 7)',
       },
       {
         name: 'should group consecutive line numbers in search results',
@@ -420,28 +424,34 @@ line 7
 foo(5)
 foo(6)`,
         expectedLines: [2, 3, 4, 6, 8, 9],
-        expectedFormat: 'test-file.js (lines: 2-4, line: 6, lines: 8-9)'
-      }
+        expectedFormat: 'test-file.js (lines: 2-4, line: 6, lines: 8-9)',
+      },
     ];
 
-    lineRangeTestCases.forEach(({ name, content, expectedLines, expectedFormat }) => {
-      test(name, () => {
-        writeFileSync(testFilePath, content, 'utf-8');
-        const searchPattern = 'foo\\(';
-        const matches = [...content.matchAll(new RegExp(searchPattern, 'gm'))];
-        const lineNumbers: number[] = [];
+    lineRangeTestCases.forEach(
+      ({ name, content, expectedLines, expectedFormat }) => {
+        test(name, () => {
+          writeFileSync(testFilePath, content, 'utf-8');
+          const searchPattern = 'foo\\(';
+          const matches = [
+            ...content.matchAll(new RegExp(searchPattern, 'gm')),
+          ];
+          const lineNumbers: number[] = [];
 
-        for (const match of matches) {
-          const beforeMatch = content.substring(0, match.index!);
-          const lineNumber = beforeMatch.split('\n').length;
-          lineNumbers.push(lineNumber);
-        }
+          for (const match of matches) {
+            const beforeMatch = content.substring(0, match.index!);
+            const lineNumber = beforeMatch.split('\n').length;
+            lineNumbers.push(lineNumber);
+          }
 
-        expect(lineNumbers).toEqual(expectedLines);
-        const groupedLines = groupConsecutiveLines(lineNumbers);
-        expect(`test-file.js (${groupedLines.join(', ')})`).toBe(expectedFormat);
-      });
-    });
+          expect(lineNumbers).toEqual(expectedLines);
+          const groupedLines = groupConsecutiveLines(lineNumbers);
+          expect(`test-file.js (${groupedLines.join(', ')})`).toBe(
+            expectedFormat
+          );
+        });
+      }
+    );
   });
 
   describe('Integration Tests', () => {
@@ -570,19 +580,21 @@ foo(6)`,
         content: 'let k = foo(1,2,3);\nlet m = foo("hi");',
         searchPattern: 'foo\\((.+)\\)',
         replacePattern: 'bar($1)',
-        expected: 'let k = bar(1,2,3);\nlet m = bar("hi");'
-      }
+        expected: 'let k = bar(1,2,3);\nlet m = bar("hi");',
+      },
     ];
 
-    specExampleTestCases.forEach(({ name, content, searchPattern, replacePattern, expected }) => {
-      test(name, () => {
-        const result = content.replace(
-          new RegExp(searchPattern, 'g'),
-          replacePattern
-        );
-        expect(result).toBe(expected);
-      });
-    });
+    specExampleTestCases.forEach(
+      ({ name, content, searchPattern, replacePattern, expected }) => {
+        test(name, () => {
+          const result = content.replace(
+            new RegExp(searchPattern, 'g'),
+            replacePattern
+          );
+          expect(result).toBe(expected);
+        });
+      }
+    );
 
     test('should handle import context pattern from spec', () => {
       const content = `import (
