@@ -230,16 +230,17 @@ server.registerTool(
         }
 
         if (validMatches.length > 0) {
-          const lineRanges = validMatches
-            .map(m => m.line)
-            .sort((a, b) => a - b);
-          const firstLine = lineRanges[0];
-          const lastLine = lineRanges[lineRanges.length - 1];
+          // Use Set to remove duplicate line numbers
+          const uniqueLineNumbers = [...new Set(validMatches.map(m => m.line))];
+          const lineNumbers = uniqueLineNumbers.sort((a, b) => a - b);
 
-          if (firstLine === lastLine) {
-            results.push(`${filePath} (line: ${firstLine})`);
+          if (lineNumbers.length === 1) {
+            results.push(`${filePath} (line: ${lineNumbers[0]})`);
           } else {
-            results.push(`${filePath} (lines: ${firstLine}-${lastLine})`);
+            const linesList = lineNumbers
+              .map(line => `line: ${line}`)
+              .join(', ');
+            results.push(`${filePath} (${linesList})`);
           }
         }
       }

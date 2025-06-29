@@ -247,13 +247,13 @@ function anotherFunction() {
       const searchPattern = 'targetFunction';
       const regex = new RegExp(searchPattern, 'gm');
 
-      const searchResults = [];
+      const searchResults: string[] = [];
       for (const filePath of files) {
         const content = readFileSync(filePath, 'utf-8');
         const matches = [...content.matchAll(regex)];
 
         if (matches.length > 0) {
-          const lineNumbers = [];
+          const lineNumbers: number[] = [];
           for (const match of matches) {
             const beforeMatch = content.substring(0, match.index!);
             const lineNumber = beforeMatch.split('\n').length;
@@ -315,7 +315,7 @@ class Test {
       const contextPattern = 'function|import';
 
       const matches = [...content.matchAll(new RegExp(searchPattern, 'gm'))];
-      const validMatches = [];
+      const validMatches: RegExpExecArray[] = [];
 
       for (const match of matches) {
         const beforeMatch = content.substring(0, match.index!);
@@ -347,7 +347,7 @@ line 8`;
 
       const searchPattern = 'foo\\(';
       const matches = [...content.matchAll(new RegExp(searchPattern, 'gm'))];
-      const lineNumbers = [];
+      const lineNumbers: number[] = [];
 
       for (const match of matches) {
         const beforeMatch = content.substring(0, match.index!);
@@ -359,15 +359,15 @@ line 8`;
 
       // Test line range formatting
       const firstLine = lineNumbers[0];
-      const lastLine = lineNumbers[lineNumbers.length - 1];
 
-      if (firstLine === lastLine) {
+      if (lineNumbers.length === 1) {
         expect(`test-file.js (line: ${firstLine})`).toBe(
           'test-file.js (line: 2)'
         );
       } else {
-        expect(`test-file.js (lines: ${firstLine}-${lastLine})`).toBe(
-          'test-file.js (lines: 2-7)'
+        const linesList = lineNumbers.map(line => `line: ${line}`).join(', ');
+        expect(`test-file.js (${linesList})`).toBe(
+          'test-file.js (line: 2, line: 5, line: 7)'
         );
       }
     });
