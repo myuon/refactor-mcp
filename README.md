@@ -87,7 +87,14 @@ npm test             # Run tests
 
 This server uses the Model Context Protocol to communicate with compatible clients. It runs via stdio transport and can be integrated into any MCP-compatible environment.
 
-### Configuration Example
+### Claude Code Integration
+For Claude Code users, you can easily add this MCP server with:
+
+```bash
+claude mcp add refactor npx @myuon/refactor-mcp@latest
+```
+
+### Manual Configuration
 Add to your MCP client configuration:
 
 ```json
