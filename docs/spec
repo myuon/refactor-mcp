@@ -1,0 +1,67 @@
+# refactor-mcp
+
+このツールはCoding Agentによるrefactoringを手助けするMCPツールです。
+MCPサーバーとして機能します。
+
+備えてる機能について以下に記述します。
+
+## Tool: code_refactor(search_pattern: string, replace_pattern: string, context_pattern: string | undefined, file_pattern: string | undefined)
+
+refactorツールは、search_patternにヒットしたコードをreplace_patternに置き換えます。
+search_patternとreplace_patternは共に正規表現によって記述します。
+
+例:
+```
+Tool: refactor("foo((\.+))", "bar($1)")
+
+Before:
+let k = foo(1,2,3);
+let m = foo("hi");
+
+After:
+let k = bar(1,2,3);
+let m = bar("hi");
+```
+
+### context_patternによるフィルタ
+
+特定のコードに該当する時にのみ実行することができます。
+
+例:
+```
+Tool: refactor("legacy_sdk", "brand_new_sdk", "import ($0)")
+
+Before:
+import (
+  "legacy_sdk"
+)
+
+After:
+import (
+  "brand_new_sdk"
+)
+```
+
+### file_patternによるフィルタ
+
+特定のファイルに該当する時にのみ実行することができます。
+
+例:
+```
+Tool: refactor("legacy_sdk", "brand_new_sdk", undefined, "model/*.go")
+```
+
+## Tool: code_search(search_pattern: string, context_pattern: string | undefined, file_pattern: string | undefined)
+
+searchツールは、search_patternにヒットするコードを検索し、該当のファイル名と行数を返します。
+search_patternは正規表現によって記述します。
+
+例:
+```
+Tool: code_search("foo(\.+)")
+
+Result:
+./model/foo.go (lines: 10-20)
+./model/bar.go (lines: 30-40)
+```
+
