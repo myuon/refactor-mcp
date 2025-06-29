@@ -49,7 +49,20 @@ code_search("foo\\(.+\\)")
 
 ## Installation
 
+### Quick Start
 ```bash
+# Install globally
+npm install -g @myuon/refactor-mcp
+
+# Or run directly with npx
+npx @myuon/refactor-mcp@latest
+```
+
+### For Development
+```bash
+# Clone and install dependencies
+git clone https://github.com/myuon/refactor-mcp.git
+cd refactor-mcp
 npm install
 ```
 
@@ -81,8 +94,19 @@ Add to your MCP client configuration:
 {
   "mcpServers": {
     "refactor-mcp": {
-      "command": "node",
-      "args": ["path/to/refactor-mcp/dist/server.js"]
+      "command": "npx",
+      "args": ["@myuon/refactor-mcp@latest"]
+    }
+  }
+}
+```
+
+### Alternative Configuration (Local Installation)
+```json
+{
+  "mcpServers": {
+    "refactor-mcp": {
+      "command": "refactor-mcp"
     }
   }
 }
