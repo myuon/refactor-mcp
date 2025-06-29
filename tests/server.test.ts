@@ -50,107 +50,134 @@ describe('MCP Refactor Server', () => {
   });
 
   describe('Helper Functions', () => {
-    test('readFileContent should read file correctly', () => {
-      const testContent = 'const x = 1;\nconst y = 2;';
-      writeFileSync(testFilePath, testContent, 'utf-8');
+    const helperTestCases = [
+      {
+        name: 'should read file correctly',
+        test: 'readFileContent',
+        content: 'const x = 1;\nconst y = 2;',
+        expected: 'const x = 1;\nconst y = 2;'
+      },
+      {
+        name: 'should write file correctly',
+        test: 'writeFileContent',
+        content: 'const z = 3;',
+        expected: 'const z = 3;'
+      }
+    ];
 
-      const result = readFileContent(testFilePath);
-      expect(result).toBe(testContent);
-    });
-
-    test('writeFileContent should write file correctly', () => {
-      const testContent = 'const z = 3;';
-      writeFileContent(testFilePath, testContent);
-
-      const result = readFileSync(testFilePath, 'utf-8');
-      expect(result).toBe(testContent);
+    helperTestCases.forEach(({ name, test, content, expected }) => {
+      if (test === 'readFileContent') {
+        it(name, () => {
+          writeFileSync(testFilePath, content, 'utf-8');
+          const result = readFileContent(testFilePath);
+          expect(result).toBe(expected);
+        });
+      } else if (test === 'writeFileContent') {
+        it(name, () => {
+          writeFileContent(testFilePath, content);
+          const result = readFileSync(testFilePath, 'utf-8');
+          expect(result).toBe(expected);
+        });
+      }
     });
 
     test('searchFiles should find files matching pattern', async () => {
-      // Create a test file
       writeFileSync(testFilePath, 'test content', 'utf-8');
-
       const results = await searchFiles('test-*.js');
       expect(results).toContain(testFilePath);
     });
 
-    test('groupConsecutiveLines should group consecutive numbers', () => {
-      // Single line
-      expect(groupConsecutiveLines([5])).toEqual(['line: 5']);
+    const groupConsecutiveLinesTestCases = [
+      {
+        name: 'should handle single line',
+        input: [5],
+        expected: ['line: 5']
+      },
+      {
+        name: 'should handle all consecutive',
+        input: [1, 2, 3, 4, 5],
+        expected: ['lines: 1-5']
+      },
+      {
+        name: 'should handle mixed consecutive and non-consecutive',
+        input: [1, 2, 3, 5, 7, 8, 9, 12],
+        expected: ['lines: 1-3', 'line: 5', 'lines: 7-9', 'line: 12']
+      },
+      {
+        name: 'should handle no consecutive numbers',
+        input: [1, 3, 5, 7],
+        expected: ['line: 1', 'line: 3', 'line: 5', 'line: 7']
+      },
+      {
+        name: 'should handle two consecutive groups',
+        input: [1, 2, 5, 6],
+        expected: ['lines: 1-2', 'lines: 5-6']
+      },
+      {
+        name: 'should handle empty array',
+        input: [],
+        expected: []
+      }
+    ];
 
-      // All consecutive
-      expect(groupConsecutiveLines([1, 2, 3, 4, 5])).toEqual(['lines: 1-5']);
-
-      // Mixed consecutive and non-consecutive
-      expect(groupConsecutiveLines([1, 2, 3, 5, 7, 8, 9, 12])).toEqual([
-        'lines: 1-3',
-        'line: 5',
-        'lines: 7-9',
-        'line: 12',
-      ]);
-
-      // No consecutive numbers
-      expect(groupConsecutiveLines([1, 3, 5, 7])).toEqual([
-        'line: 1',
-        'line: 3',
-        'line: 5',
-        'line: 7',
-      ]);
-
-      // Two consecutive groups
-      expect(groupConsecutiveLines([1, 2, 5, 6])).toEqual([
-        'lines: 1-2',
-        'lines: 5-6',
-      ]);
-
-      // Empty array
-      expect(groupConsecutiveLines([])).toEqual([]);
+    groupConsecutiveLinesTestCases.forEach(({ name, input, expected }) => {
+      test(name, () => {
+        expect(groupConsecutiveLines(input)).toEqual(expected);
+      });
     });
   });
 
   describe('Simple Regex Test', () => {
-    test('basic regex replacement should work', () => {
-      const content = 'const foo = 1;\nconst foo = 2;';
-      const searchPattern = 'foo';
-      const replacePattern = 'bar';
+    const regexTestCases = [
+      {
+        name: 'basic regex replacement should work',
+        content: 'const foo = 1;\nconst foo = 2;',
+        searchPattern: 'foo',
+        replacePattern: 'bar',
+        expected: 'const bar = 1;\nconst bar = 2;'
+      },
+      {
+        name: 'regex with capture groups should work',
+        content: 'foo(1,2,3);\nfoo("hello");',
+        searchPattern: 'foo\\((.+)\\)',
+        replacePattern: 'bar($1)',
+        expected: 'bar(1,2,3);\nbar("hello");'
+      }
+    ];
 
-      const result = content.replace(
-        new RegExp(searchPattern, 'g'),
-        replacePattern
-      );
-      expect(result).toBe('const bar = 1;\nconst bar = 2;');
-    });
-
-    test('regex with capture groups should work', () => {
-      const content = 'foo(1,2,3);\nfoo("hello");';
-      const searchPattern = 'foo\\((.+)\\)';
-      const replacePattern = 'bar($1)';
-
-      const result = content.replace(
-        new RegExp(searchPattern, 'g'),
-        replacePattern
-      );
-      expect(result).toBe('bar(1,2,3);\nbar("hello");');
+    regexTestCases.forEach(({ name, content, searchPattern, replacePattern, expected }) => {
+      test(name, () => {
+        const result = content.replace(
+          new RegExp(searchPattern, 'g'),
+          replacePattern
+        );
+        expect(result).toBe(expected);
+      });
     });
   });
 
   describe('Code Refactor Tool', () => {
-    test('should perform basic regex replacement in file', () => {
-      const content = 'let k = foo(1,2,3);\nlet m = foo("hi");';
-      writeFileSync(testFilePath, content, 'utf-8');
+    const refactorTestCases = [
+      {
+        name: 'should perform basic regex replacement in file',
+        content: 'let k = foo(1,2,3);\nlet m = foo("hi");',
+        searchPattern: 'foo\\((.+)\\)',
+        replacePattern: 'bar($1)',
+        expected: 'let k = bar(1,2,3);\nlet m = bar("hi");'
+      }
+    ];
 
-      // Simulate the refactor logic
-      const searchPattern = 'foo\\((.+)\\)';
-      const replacePattern = 'bar($1)';
-      const newContent = content.replace(
-        new RegExp(searchPattern, 'g'),
-        replacePattern
-      );
-
-      writeFileSync(testFilePath, newContent, 'utf-8');
-      const result = readFileSync(testFilePath, 'utf-8');
-
-      expect(result).toBe('let k = bar(1,2,3);\nlet m = bar("hi");');
+    refactorTestCases.forEach(({ name, content, searchPattern, replacePattern, expected }) => {
+      test(name, () => {
+        writeFileSync(testFilePath, content, 'utf-8');
+        const newContent = content.replace(
+          new RegExp(searchPattern, 'g'),
+          replacePattern
+        );
+        writeFileSync(testFilePath, newContent, 'utf-8');
+        const result = readFileSync(testFilePath, 'utf-8');
+        expect(result).toBe(expected);
+      });
     });
 
     test('should work with context pattern filtering', () => {
@@ -367,39 +394,23 @@ class Test {
       expect(validMatches.length).toBe(1);
     });
 
-    test('should return proper line ranges for multiple matches', () => {
-      const content = `line 1
+    const lineRangeTestCases = [
+      {
+        name: 'should return proper line ranges for multiple matches',
+        content: `line 1
 foo(1)
 line 3
 line 4
 foo(2)
 line 6
 foo(3)
-line 8`;
-
-      writeFileSync(testFilePath, content, 'utf-8');
-
-      const searchPattern = 'foo\\(';
-      const matches = [...content.matchAll(new RegExp(searchPattern, 'gm'))];
-      const lineNumbers: number[] = [];
-
-      for (const match of matches) {
-        const beforeMatch = content.substring(0, match.index!);
-        const lineNumber = beforeMatch.split('\n').length;
-        lineNumbers.push(lineNumber);
-      }
-
-      expect(lineNumbers).toEqual([2, 5, 7]);
-
-      // Test line range formatting with new grouping logic
-      const groupedLines = groupConsecutiveLines(lineNumbers);
-      expect(`test-file.js (${groupedLines.join(', ')})`).toBe(
-        'test-file.js (line: 2, line: 5, line: 7)'
-      );
-    });
-
-    test('should group consecutive line numbers in search results', () => {
-      const content = `line 1
+line 8`,
+        expectedLines: [2, 5, 7],
+        expectedFormat: 'test-file.js (line: 2, line: 5, line: 7)'
+      },
+      {
+        name: 'should group consecutive line numbers in search results',
+        content: `line 1
 foo(1)
 foo(2)
 foo(3)
@@ -407,27 +418,29 @@ line 5
 foo(4)
 line 7
 foo(5)
-foo(6)`;
-
-      writeFileSync(testFilePath, content, 'utf-8');
-
-      const searchPattern = 'foo\\(';
-      const matches = [...content.matchAll(new RegExp(searchPattern, 'gm'))];
-      const lineNumbers: number[] = [];
-
-      for (const match of matches) {
-        const beforeMatch = content.substring(0, match.index!);
-        const lineNumber = beforeMatch.split('\n').length;
-        lineNumbers.push(lineNumber);
+foo(6)`,
+        expectedLines: [2, 3, 4, 6, 8, 9],
+        expectedFormat: 'test-file.js (lines: 2-4, line: 6, lines: 8-9)'
       }
+    ];
 
-      expect(lineNumbers).toEqual([2, 3, 4, 6, 8, 9]);
+    lineRangeTestCases.forEach(({ name, content, expectedLines, expectedFormat }) => {
+      test(name, () => {
+        writeFileSync(testFilePath, content, 'utf-8');
+        const searchPattern = 'foo\\(';
+        const matches = [...content.matchAll(new RegExp(searchPattern, 'gm'))];
+        const lineNumbers: number[] = [];
 
-      // Test consecutive grouping
-      const groupedLines = groupConsecutiveLines(lineNumbers);
-      expect(`test-file.js (${groupedLines.join(', ')})`).toBe(
-        'test-file.js (lines: 2-4, line: 6, lines: 8-9)'
-      );
+        for (const match of matches) {
+          const beforeMatch = content.substring(0, match.index!);
+          const lineNumber = beforeMatch.split('\n').length;
+          lineNumbers.push(lineNumber);
+        }
+
+        expect(lineNumbers).toEqual(expectedLines);
+        const groupedLines = groupConsecutiveLines(lineNumbers);
+        expect(`test-file.js (${groupedLines.join(', ')})`).toBe(expectedFormat);
+      });
     });
   });
 
@@ -551,18 +564,24 @@ foo(6)`;
       rmSync('mixed', { recursive: true, force: true });
     });
 
-    test('should handle complex regex patterns from spec examples', () => {
-      const content = 'let k = foo(1,2,3);\nlet m = foo("hi");';
+    const specExampleTestCases = [
+      {
+        name: 'should handle complex regex patterns from spec examples',
+        content: 'let k = foo(1,2,3);\nlet m = foo("hi");',
+        searchPattern: 'foo\\((.+)\\)',
+        replacePattern: 'bar($1)',
+        expected: 'let k = bar(1,2,3);\nlet m = bar("hi");'
+      }
+    ];
 
-      // Test the exact pattern from spec: foo((.+))
-      const searchPattern = 'foo\\((.+)\\)';
-      const replacePattern = 'bar($1)';
-
-      const result = content.replace(
-        new RegExp(searchPattern, 'g'),
-        replacePattern
-      );
-      expect(result).toBe('let k = bar(1,2,3);\nlet m = bar("hi");');
+    specExampleTestCases.forEach(({ name, content, searchPattern, replacePattern, expected }) => {
+      test(name, () => {
+        const result = content.replace(
+          new RegExp(searchPattern, 'g'),
+          replacePattern
+        );
+        expect(result).toBe(expected);
+      });
     });
 
     test('should handle import context pattern from spec', () => {
