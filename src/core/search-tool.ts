@@ -11,6 +11,8 @@ export interface SearchOptions {
 export interface SearchMatch {
   line: number;
   content: string;
+  captureGroups?: string[];
+  matchedText?: string;
 }
 
 export interface SearchResult {
@@ -45,6 +47,11 @@ export async function performSearch(
         const beforeMatch = content.substring(0, match.index);
         const lineNumber = beforeMatch.split('\n').length;
 
+        // Extract capture groups if any
+        const captureGroups = match.slice(1).filter(group => group !== undefined);
+        // Extract the full matched text
+        const matchedText = match[0];
+
         if (contextRegex) {
           const beforeMatchLines = beforeMatch.split('\n').slice(-5).join('\n');
           const afterMatchIndex = match.index + match[0].length;
@@ -56,12 +63,16 @@ export async function performSearch(
             validMatches.push({
               line: lineNumber,
               content: lines[lineNumber - 1],
+              captureGroups: captureGroups.length > 0 ? captureGroups : undefined,
+              matchedText,
             });
           }
         } else {
           validMatches.push({
             line: lineNumber,
             content: lines[lineNumber - 1],
+            captureGroups: captureGroups.length > 0 ? captureGroups : undefined,
+            matchedText,
           });
         }
       }

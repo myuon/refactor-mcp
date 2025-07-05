@@ -131,6 +131,45 @@ legacy_sdk.initialize();`
           hasVariable: true,
         },
       },
+      {
+        name: 'should capture groups from regex patterns',
+        options: {
+          searchPattern: 'function (\\w+)\\(',
+          filePattern: `${testDir}/**/*.js`,
+        },
+        expected: {
+          resultCount: 1,
+          matchCount: 2,
+          hasCaptureGroups: true,
+          expectedCaptureGroups: ['testFunction', 'exportedFunction'],
+        },
+      },
+      {
+        name: 'should capture multiple groups from regex patterns',
+        options: {
+          searchPattern: '(export )?function (\\w+)\\(',
+          filePattern: `${testDir}/**/*.js`,
+        },
+        expected: {
+          resultCount: 1,
+          matchCount: 2,
+          hasCaptureGroups: true,
+          hasMultipleCaptureGroups: true,
+        },
+      },
+      {
+        name: 'should store matched text in search results',
+        options: {
+          searchPattern: 'function (\\w+)\\(',
+          filePattern: `${testDir}/**/*.js`,
+        },
+        expected: {
+          resultCount: 1,
+          matchCount: 2,
+          hasMatchedText: true,
+          expectedMatchedTexts: ['function testFunction(', 'function exportedFunction('],
+        },
+      },
     ];
 
     testCases.forEach(({ name, options, expected }) => {
@@ -171,6 +210,39 @@ legacy_sdk.initialize();`
           expect(
             results.some(r => r.matches.some(m => m.content.includes('variable')))
           ).toBe(true);
+        }
+
+        if (expected.hasCaptureGroups) {
+          expect(results[0].matches.some(m => m.captureGroups && m.captureGroups.length > 0)).toBe(true);
+        }
+
+        if (expected.expectedCaptureGroups) {
+          const allCaptureGroups = results[0].matches
+            .filter(m => m.captureGroups)
+            .flatMap(m => m.captureGroups!);
+          expected.expectedCaptureGroups.forEach(group => {
+            expect(allCaptureGroups).toContain(group);
+          });
+        }
+
+        if (expected.hasMultipleCaptureGroups) {
+          const hasMultipleGroups = results[0].matches.some(m => 
+            m.captureGroups && m.captureGroups.length > 1
+          );
+          expect(hasMultipleGroups).toBe(true);
+        }
+
+        if (expected.hasMatchedText) {
+          expect(results[0].matches.every(m => m.matchedText !== undefined)).toBe(true);
+        }
+
+        if (expected.expectedMatchedTexts) {
+          const allMatchedTexts = results[0].matches
+            .map(m => m.matchedText)
+            .filter(text => text !== undefined);
+          expected.expectedMatchedTexts.forEach(text => {
+            expect(allMatchedTexts).toContain(text);
+          });
         }
       });
     });
@@ -319,7 +391,7 @@ const d = 4;`
           const results = await performSearch(options);
           expect(results).toHaveLength(expected.resultCount);
 
-          if (expected.matchCount) {
+          if (expected.matchCount && results.length > 0) {
             expect(results[0].matches).toHaveLength(expected.matchCount);
           }
         }

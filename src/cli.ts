@@ -34,6 +34,7 @@ program
     'Optional file glob pattern to limit search scope'
   )
   .option('--print', 'Print matched content to stdout')
+  .option('--matched', 'Show matched text and capture groups')
   .action(async options => {
     try {
       const results = await performSearch({
@@ -47,6 +48,21 @@ program
           console.log(`\n=== ${result.filePath} ===`);
           for (const match of result.matches) {
             console.log(`${match.line}:${match.content}`);
+            if (match.captureGroups && match.captureGroups.length > 0) {
+              console.log(`  └─ Captured: [${match.captureGroups.join(', ')}]`);
+            }
+          }
+        }
+      }
+
+      if (options.matched && results.length > 0) {
+        for (const result of results) {
+          console.log(`\n=== ${result.filePath} ===`);
+          for (const match of result.matches) {
+            console.log(`${match.line}: ${match.matchedText}`);
+            if (match.captureGroups && match.captureGroups.length > 0) {
+              console.log(`  └─ Captured: [${match.captureGroups.join(', ')}]`);
+            }
           }
         }
       }

@@ -108,6 +108,54 @@ const finalOld = true;`
       expect(stdout).toContain('line: 7');
       expect(stdout).not.toContain('line: 1');
     });
+
+    test('should display capture groups with --print option', async () => {
+      const { stdout } = await execAsync(
+        `npm run cli -- search -p "function (\\w+)\\(" -f "${testDir}/**/*.js" --print`
+      );
+
+      expect(stdout).toContain(`=== ${testDir}/test-search.js ===`);
+      expect(stdout).toContain('1:function searchExample() {');
+      expect(stdout).toContain('  └─ Captured: [searchExample]');
+      expect(stdout).toContain('7:export function anotherFunction() {');
+      expect(stdout).toContain('  └─ Captured: [anotherFunction]');
+    });
+
+    test('should display multiple capture groups', async () => {
+      const { stdout } = await execAsync(
+        `npm run cli -- search -p "(export )?function (\\w+)\\(" -f "${testDir}/**/*.js" --print`
+      );
+
+      expect(stdout).toContain(`=== ${testDir}/test-search.js ===`);
+      expect(stdout).toContain('1:function searchExample() {');
+      expect(stdout).toContain('  └─ Captured: [searchExample]');
+      expect(stdout).toContain('7:export function anotherFunction() {');
+      expect(stdout).toContain('  └─ Captured: [export , anotherFunction]');
+    });
+
+    test('should display matched text with --matched option', async () => {
+      const { stdout } = await execAsync(
+        `npm run cli -- search -p "function (\\w+)\\(" -f "${testDir}/**/*.js" --matched`
+      );
+
+      expect(stdout).toContain(`=== ${testDir}/test-search.js ===`);
+      expect(stdout).toContain('1: function searchExample(');
+      expect(stdout).toContain('  └─ Captured: [searchExample]');
+      expect(stdout).toContain('7: function anotherFunction(');
+      expect(stdout).toContain('  └─ Captured: [anotherFunction]');
+    });
+
+    test('should display matched text with multiple capture groups using --matched', async () => {
+      const { stdout } = await execAsync(
+        `npm run cli -- search -p "(export )?function (\\w+)\\(" -f "${testDir}/**/*.js" --matched`
+      );
+
+      expect(stdout).toContain(`=== ${testDir}/test-search.js ===`);
+      expect(stdout).toContain('1: function searchExample(');
+      expect(stdout).toContain('  └─ Captured: [searchExample]');
+      expect(stdout).toContain('7: export function anotherFunction(');
+      expect(stdout).toContain('  └─ Captured: [export , anotherFunction]');
+    });
   });
 
   describe('refactor command', () => {
