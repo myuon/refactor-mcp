@@ -37,6 +37,7 @@ program
     '-f, --files <files>',
     'Optional file glob pattern to limit search scope'
   )
+  .option('--print', 'Print matched content to stdout')
   .action(async options => {
     try {
       const files = await searchFiles(options.files);
@@ -95,6 +96,13 @@ program
 
           const groupedLines = groupConsecutiveLines(lineNumbers);
           results.push(`${filePath} (${groupedLines.join(', ')})`);
+
+          if (options.print) {
+            console.log(`\n=== ${filePath} ===`);
+            for (const match of validMatches) {
+              console.log(`${match.line}:${match.content}`);
+            }
+          }
         }
       }
 
@@ -136,6 +144,7 @@ program
     '--dry-run',
     'Show what would be changed without actually modifying files'
   )
+  .option('--print', 'Print matched content to stdout')
   .action(async options => {
     try {
       const files = await searchFiles(options.files);
@@ -146,8 +155,15 @@ program
         if (!existsSync(filePath)) continue;
 
         const content = readFileContent(filePath);
+        const lines = content.split('\n');
         let modified = false;
         let fileReplacements = 0;
+        const matchedLines: {
+          line: number;
+          content: string;
+          original: string;
+          replaced: string;
+        }[] = [];
 
         const searchRegex = new RegExp(options.search, 'g');
         const contextRegex = options.context
@@ -175,6 +191,21 @@ program
               const contextArea = contextBefore + match[0] + contextAfter;
 
               if (contextRegex.test(contextArea)) {
+                const lineNumber = beforeMatch.split('\n').length;
+                const originalLine = lines[lineNumber - 1];
+
+                if (options.print) {
+                  matchedLines.push({
+                    line: lineNumber,
+                    content: originalLine,
+                    original: match[0],
+                    replaced: match[0].replace(
+                      new RegExp(options.search),
+                      options.replace
+                    ),
+                  });
+                }
+
                 newContent = newContent.replace(
                   match[0],
                   match[0].replace(new RegExp(options.search), options.replace)
@@ -185,6 +216,27 @@ program
             }
           }
         } else {
+          const matches = [...content.matchAll(searchRegex)];
+          for (const match of matches) {
+            if (match.index !== undefined) {
+              const beforeMatch = content.substring(0, match.index);
+              const lineNumber = beforeMatch.split('\n').length;
+              const originalLine = lines[lineNumber - 1];
+
+              if (options.print) {
+                matchedLines.push({
+                  line: lineNumber,
+                  content: originalLine,
+                  original: match[0],
+                  replaced: match[0].replace(
+                    new RegExp(options.search),
+                    options.replace
+                  ),
+                });
+              }
+            }
+          }
+
           const replacedContent = content.replace(searchRegex, options.replace);
           if (replacedContent !== content) {
             newContent = replacedContent;
@@ -203,6 +255,14 @@ program
             results.push(`${filePath}: ${fileReplacements} replacements`);
           }
           totalReplacements += fileReplacements;
+
+          if (options.print && matchedLines.length > 0) {
+            console.log(`\n=== ${filePath} ===`);
+            for (const match of matchedLines) {
+              console.log(`${match.line}:${match.content}`);
+              console.log(`   - ${match.original} → ${match.replaced}`);
+            }
+          }
         }
       }
 

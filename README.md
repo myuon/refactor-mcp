@@ -75,8 +75,14 @@ You can use the refactor tools directly from the command line:
 # Search for patterns
 refactor-cli search -p "function (.*) \{" -f "src/**/*.ts"
 
+# Search with matched content display
+refactor-cli search -p "function (.*) \{" -f "src/**/*.ts" --print
+
 # Refactor with dry-run (preview changes)
 refactor-cli refactor -s "const (\w+) = " -r "let $1 = " --dry-run
+
+# Refactor with matched content display
+refactor-cli refactor -s "const (\w+) = " -r "let $1 = " --print --dry-run
 
 # Refactor with file pattern
 refactor-cli refactor -s "old_function" -r "new_function" -f "src/**/*.js"
@@ -90,12 +96,14 @@ refactor-cli refactor -s "legacy_sdk" -r "new_sdk" -c "import" -f "src/**/*.ts"
   - `-p, --pattern <pattern>` - Regular expression pattern to search for
   - `-c, --context <context>` - Optional context pattern to filter matches
   - `-f, --files <files>` - Optional file glob pattern to limit search scope
+  - `--print` - Print matched content to stdout
 - `refactor` - Refactor code with regex replacement
   - `-s, --search <search>` - Regular expression pattern to search for
   - `-r, --replace <replace>` - Replacement pattern (supports $1, $2, etc.)
   - `-c, --context <context>` - Optional context pattern to filter matches
   - `-f, --files <files>` - Optional file glob pattern to limit search scope
   - `--dry-run` - Preview changes without modifying files
+  - `--print` - Print matched content and replacements to stdout
 
 ### Development
 ```bash
