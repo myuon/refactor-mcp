@@ -68,9 +68,39 @@ npm install
 
 ## Usage
 
+### CLI Mode
+You can use the refactor tools directly from the command line:
+
+```bash
+# Search for patterns
+refactor-cli search -p "function (.*) \{" -f "src/**/*.ts"
+
+# Refactor with dry-run (preview changes)
+refactor-cli refactor -s "const (\w+) = " -r "let $1 = " --dry-run
+
+# Refactor with file pattern
+refactor-cli refactor -s "old_function" -r "new_function" -f "src/**/*.js"
+
+# Context-aware refactoring
+refactor-cli refactor -s "legacy_sdk" -r "new_sdk" -c "import" -f "src/**/*.ts"
+```
+
+**CLI Commands:**
+- `search` - Search for code patterns
+  - `-p, --pattern <pattern>` - Regular expression pattern to search for
+  - `-c, --context <context>` - Optional context pattern to filter matches
+  - `-f, --files <files>` - Optional file glob pattern to limit search scope
+- `refactor` - Refactor code with regex replacement
+  - `-s, --search <search>` - Regular expression pattern to search for
+  - `-r, --replace <replace>` - Replacement pattern (supports $1, $2, etc.)
+  - `-c, --context <context>` - Optional context pattern to filter matches
+  - `-f, --files <files>` - Optional file glob pattern to limit search scope
+  - `--dry-run` - Preview changes without modifying files
+
 ### Development
 ```bash
 npm run dev          # Run server in development mode
+npm run cli          # Run CLI in development mode
 npm run build        # Build for production
 npm start            # Run built server
 ```
