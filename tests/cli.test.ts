@@ -334,7 +334,7 @@ const anotherMulti = 456;`
     test('should show version', async () => {
       const { stdout } = await execAsync('npm run cli -- --version');
 
-      expect(stdout).toContain('1.1.1');
+      expect(stdout).toContain('1.2.0');
     });
   });
 });
