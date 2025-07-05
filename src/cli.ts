@@ -124,6 +124,9 @@ program
           for (const match of result.matches) {
             console.log(`${match.line}:${match.content}`);
             console.log(`   - ${match.original} → ${match.replaced}`);
+            if (match.captureGroups && match.captureGroups.length > 0) {
+              console.log(`     └─ Captured: [${match.captureGroups.join(', ')}]`);
+            }
           }
         }
       }

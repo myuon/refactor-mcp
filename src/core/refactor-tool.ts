@@ -63,23 +63,26 @@ export async function performRefactor(
           if (contextRegex.test(contextArea)) {
             const lineNumber = beforeMatch.split('\n').length;
             const originalLine = lines[lineNumber - 1];
+            
+            // Extract capture groups if any
+            const captureGroups = match.slice(1).filter(group => group !== undefined);
 
+            const replaced = match[0].replace(
+              new RegExp(options.searchPattern),
+              options.replacePattern
+            );
+            
             matchedLines.push({
               line: lineNumber,
               content: originalLine,
               original: match[0],
-              replaced: match[0].replace(
-                new RegExp(options.searchPattern),
-                options.replacePattern
-              ),
+              replaced,
+              captureGroups: captureGroups.length > 0 ? captureGroups : undefined,
             });
 
             newContent = newContent.replace(
               match[0],
-              match[0].replace(
-                new RegExp(options.searchPattern),
-                options.replacePattern
-              )
+              replaced
             );
             fileReplacements++;
             modified = true;
@@ -93,15 +96,21 @@ export async function performRefactor(
           const beforeMatch = content.substring(0, match.index);
           const lineNumber = beforeMatch.split('\n').length;
           const originalLine = lines[lineNumber - 1];
+          
+          // Extract capture groups if any
+          const captureGroups = match.slice(1).filter(group => group !== undefined);
 
+          const replaced = match[0].replace(
+            new RegExp(options.searchPattern),
+            options.replacePattern
+          );
+          
           matchedLines.push({
             line: lineNumber,
             content: originalLine,
             original: match[0],
-            replaced: match[0].replace(
-              new RegExp(options.searchPattern),
-              options.replacePattern
-            ),
+            replaced,
+            captureGroups: captureGroups.length > 0 ? captureGroups : undefined,
           });
         }
       }
