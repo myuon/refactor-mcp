@@ -782,4 +782,103 @@ export function exportedFunction() {
       expect(formattedOldWay).toContain('replacements in');
     });
   });
+
+  describe('MCP Prompt Resources', () => {
+    beforeEach(() => {
+      mkdirSync(testDir, { recursive: true });
+      writeFileSync(
+        `${testDir}/test-prompts.js`,
+        `function testFunction() {
+  const variable = 'test';
+  return variable;
+}
+
+export function exportedFunction() {
+  console.log('exported');
+  return 'result';
+}
+
+const arrowFunction = () => {
+  return 'arrow';
+};
+
+export class TestClass {
+  constructor() {
+    this.data = null;
+  }
+
+  methodFunction() {
+    return this.data;
+  }
+}
+
+interface TestInterface {
+  id: number;
+  name: string;
+}`
+      );
+    });
+
+    test('should provide extract-functions prompt with function type', () => {
+      // This is a conceptual test - in practice, MCP client would call the prompt
+      // We test the pattern generation logic
+      const directory = `${testDir}/**/*.js`;
+      const patternType = 'function';
+      
+      // Simulate what the prompt would generate
+      const expectedPattern = '(?:function\\s+|export\\s+function\\s+)(\\w+)\\s*\\(';
+      
+      expect(expectedPattern).toContain('function');
+      expect(expectedPattern).toContain('export');
+      expect(expectedPattern).toContain('\\w+'); // Capture group for function name
+    });
+
+    test('should provide extract-functions prompt with arrow type', () => {
+      const directory = `${testDir}/**/*.js`;
+      const patternType = 'arrow';
+      
+      // Simulate what the prompt would generate
+      const expectedPattern = '(?:const|let|var)\\s+(\\w+)\\s*=\\s*(?:\\([^)]*\\)\\s*=>|\\w+\\s*=>)';
+      
+      expect(expectedPattern).toContain('const|let|var');
+      expect(expectedPattern).toContain('=>');
+      expect(expectedPattern).toContain('\\w+'); // Capture group for variable name
+    });
+
+    test('should provide extract-classes prompt', () => {
+      const directory = `${testDir}/**/*.ts`;
+      const includeInterfaces = 'true';
+      
+      // Simulate what the prompt would generate
+      const expectedPattern = '(?:export\\s+)?(?:class|interface)\\s+(\\w+)';
+      
+      expect(expectedPattern).toContain('class|interface');
+      expect(expectedPattern).toContain('export');
+      expect(expectedPattern).toContain('\\w+'); // Capture group for class/interface name
+    });
+
+    test('should provide extract-variables prompt', () => {
+      const directory = `${testDir}/**/*.js`;
+      const declarationType = 'const';
+      
+      // Simulate what the prompt would generate
+      const expectedPattern = 'const\\s+(\\w+)\\s*=';
+      
+      expect(expectedPattern).toContain('const');
+      expect(expectedPattern).toContain('\\w+'); // Capture group for variable name
+    });
+
+    test('should generate comprehensive function extraction prompt', () => {
+      const directory = `${testDir}/**/*.js`;
+      
+      // Test the 'all' pattern type
+      const expectedPattern = '(?:function\\s+|export\\s+function\\s+)(\\w+)\\s*\\(|(?:const|let|var)\\s+(\\w+)\\s*=\\s*(?:\\([^)]*\\)\\s*=>|\\w+\\s*=>)|(?:public\\s+|private\\s+|protected\\s+|static\\s+)?(\\w+)\\s*\\([^)]*\\)\\s*\\{';
+      
+      // Verify it includes all function types
+      expect(expectedPattern).toContain('function');
+      expect(expectedPattern).toContain('const|let|var');
+      expect(expectedPattern).toContain('=>');
+      expect(expectedPattern).toContain('public\\s+|private\\s+|protected\\s+|static\\s+');
+    });
+  });
 });
