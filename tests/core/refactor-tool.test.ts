@@ -67,7 +67,12 @@ legacy_sdk.initialize();`
           filePath: `${testDir}/variables.js`,
           replacements: 3,
           modified: true,
-          fileContains: ['let oldVariable = ', 'let anotherOld = ', 'let finalOld = ', 'let someVar = '],
+          fileContains: [
+            'let oldVariable = ',
+            'let anotherOld = ',
+            'let finalOld = ',
+            'let someVar = ',
+          ],
         },
       },
       {
@@ -96,7 +101,10 @@ legacy_sdk.initialize();`
         expected: {
           resultCount: 1,
           replacements: 2,
-          fileContains: ['function newoldFunction(', 'function newexportedOldFunction('],
+          fileContains: [
+            'function newoldFunction(',
+            'function newexportedOldFunction(',
+          ],
         },
       },
       {
@@ -158,8 +166,10 @@ legacy_sdk.initialize();`
 
     testCases.forEach(({ name, options, expected }) => {
       test(name, async () => {
-        const originalContent = expected.fileUnchanged ? readFileSync(`${testDir}/variables.js`, 'utf-8') : null;
-        
+        const originalContent = expected.fileUnchanged
+          ? readFileSync(`${testDir}/variables.js`, 'utf-8')
+          : null;
+
         const results = await performRefactor(options);
 
         if (expected.resultCount !== undefined) {
@@ -167,7 +177,9 @@ legacy_sdk.initialize();`
         }
 
         if (expected.resultCountGreaterThan !== undefined) {
-          expect(results.length).toBeGreaterThan(expected.resultCountGreaterThan);
+          expect(results.length).toBeGreaterThan(
+            expected.resultCountGreaterThan
+          );
         }
 
         if (results.length > 0) {
@@ -180,7 +192,9 @@ legacy_sdk.initialize();`
           }
 
           if (expected.replacementsGreaterThan !== undefined) {
-            expect(results[0].replacements).toBeGreaterThan(expected.replacementsGreaterThan);
+            expect(results[0].replacements).toBeGreaterThan(
+              expected.replacementsGreaterThan
+            );
           }
 
           if (expected.modified !== undefined) {
@@ -200,20 +214,29 @@ legacy_sdk.initialize();`
 
           if (expected.matchContentContains) {
             const match = results[0].matches[0];
-            const hasInOriginal = expected.matchContentContains.some(text => match.original && match.original.includes(text));
-            const hasInReplaced = expected.matchContentContains.some(text => match.replaced && match.replaced.includes(text));
+            const hasInOriginal = expected.matchContentContains.some(
+              text => match.original && match.original.includes(text)
+            );
+            const hasInReplaced = expected.matchContentContains.some(
+              text => match.replaced && match.replaced.includes(text)
+            );
             expect(hasInOriginal || hasInReplaced).toBe(true);
           }
         }
 
         if (expected.totalReplacementsGreaterThan !== undefined) {
-          const totalReplacements = results.reduce((sum, result) => sum + result.replacements, 0);
-          expect(totalReplacements).toBeGreaterThan(expected.totalReplacementsGreaterThan);
+          const totalReplacements = results.reduce(
+            (sum, result) => sum + result.replacements,
+            0
+          );
+          expect(totalReplacements).toBeGreaterThan(
+            expected.totalReplacementsGreaterThan
+          );
         }
 
         if (expected.fileContains) {
           let filePath = options.filePattern;
-          
+
           // Use the specific file based on the test case
           if (name.includes('capture groups')) {
             filePath = `${testDir}/functions.ts`;
@@ -225,7 +248,7 @@ legacy_sdk.initialize();`
             // For basic refactoring and other tests
             filePath = `${testDir}/variables.js`;
           }
-          
+
           const content = readFileSync(filePath, 'utf-8');
           expected.fileContains.forEach(text => {
             expect(content).toContain(text);
@@ -254,7 +277,12 @@ legacy_sdk.initialize();`
         },
         isDryRun: false,
         expected: {
-          contains: ['Refactoring completed:', `${testDir}/variables.js:`, 'replacements', 'Total:'],
+          contains: [
+            'Refactoring completed:',
+            `${testDir}/variables.js:`,
+            'replacements',
+            'Total:',
+          ],
         },
       },
       {
@@ -329,12 +357,19 @@ legacy_sdk.initialize();`
         }
 
         if (expected.minLines) {
-          expect(formatted.split('\n').length).toBeGreaterThan(expected.minLines);
+          expect(formatted.split('\n').length).toBeGreaterThan(
+            expected.minLines
+          );
         }
 
         if (expected.calculateTotal) {
-          const totalReplacements = results.reduce((sum, result) => sum + result.replacements, 0);
-          expect(formatted).toContain(`Total: ${totalReplacements} replacements`);
+          const totalReplacements = results.reduce(
+            (sum, result) => sum + result.replacements,
+            0
+          );
+          expect(formatted).toContain(
+            `Total: ${totalReplacements} replacements`
+          );
         }
       });
     });
@@ -422,8 +457,10 @@ function getAge() { return 25; }`
 
     testCases.forEach(({ name, setupFn, options, expected }) => {
       test(name, async () => {
-        const originalContent = expected.fileUnchanged ? readFileSync(`${testDir}/variables.js`, 'utf-8') : null;
-        
+        const originalContent = expected.fileUnchanged
+          ? readFileSync(`${testDir}/variables.js`, 'utf-8')
+          : null;
+
         if (setupFn) {
           setupFn();
         }
@@ -432,7 +469,7 @@ function getAge() { return 25; }`
           await expect(performRefactor(options)).rejects.toThrow();
         } else {
           const results = await performRefactor(options);
-          
+
           expect(results).toHaveLength(expected.resultCount);
 
           if (expected.replacements !== undefined && results.length > 0) {

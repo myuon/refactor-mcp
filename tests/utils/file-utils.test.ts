@@ -116,7 +116,9 @@ describe('File Utils', () => {
         }
 
         if (expected.lengthGreaterThanOrEqual !== undefined) {
-          expect(files.length).toBeGreaterThanOrEqual(expected.lengthGreaterThanOrEqual);
+          expect(files.length).toBeGreaterThanOrEqual(
+            expected.lengthGreaterThanOrEqual
+          );
         }
 
         if (expected.excludes) {
@@ -138,12 +140,16 @@ describe('File Utils', () => {
         }
 
         if (expected.allStartWith) {
-          expect(files.every(f => f.startsWith(expected.allStartWith))).toBe(true);
+          expect(files.every(f => f.startsWith(expected.allStartWith))).toBe(
+            true
+          );
         }
 
         if (expected.allIncludeAndEndWith) {
           const [include, endWith] = expected.allIncludeAndEndWith;
-          expect(files.every(f => f.includes(include) && f.endsWith(endWith))).toBe(true);
+          expect(
+            files.every(f => f.includes(include) && f.endsWith(endWith))
+          ).toBe(true);
         }
       });
     });
@@ -282,7 +288,7 @@ describe('File Utils', () => {
         expected: {
           shouldThrow: /Failed to write file/,
         },
-        note: 'writeFileContent doesn\'t create directories',
+        note: "writeFileContent doesn't create directories",
       },
       {
         name: 'should throw error for invalid paths',
@@ -319,30 +325,32 @@ describe('File Utils', () => {
       },
     ];
 
-    testCases.forEach(({ name, filePath, content, setupFn, expected, note }) => {
-      test(name, () => {
-        if (setupFn) {
-          setupFn();
-        }
+    testCases.forEach(
+      ({ name, filePath, content, setupFn, expected, note: _ }) => {
+        test(name, () => {
+          if (setupFn) {
+            setupFn();
+          }
 
-        if (expected.shouldThrow) {
-          expect(() => {
+          if (expected.shouldThrow) {
+            expect(() => {
+              writeFileContent(filePath, content);
+            }).toThrow(expected.shouldThrow);
+          } else {
             writeFileContent(filePath, content);
-          }).toThrow(expected.shouldThrow);
-        } else {
-          writeFileContent(filePath, content);
 
-          if (expected.contentMatches) {
-            const readContent = readFileSync(filePath, 'utf-8');
-            expect(readContent).toBe(content);
+            if (expected.contentMatches) {
+              const readContent = readFileSync(filePath, 'utf-8');
+              expect(readContent).toBe(content);
 
-            if (expected.length !== undefined) {
-              expect(readContent.length).toBe(expected.length);
+              if (expected.length !== undefined) {
+                expect(readContent.length).toBe(expected.length);
+              }
             }
           }
-        }
-      });
-    });
+        });
+      }
+    );
   });
 
   describe('integration', () => {
@@ -369,25 +377,25 @@ describe('File Utils', () => {
         setupFn: () => {
           const files = ['test1.js', 'test2.js', 'test3.js'];
           const content = 'test content';
-          
+
           // Write multiple files
           files.forEach(file => {
             writeFileContent(`${testDir}/${file}`, content);
           });
-          
+
           return { files, content };
         },
-        testFn: async (setupResult) => {
+        testFn: async setupResult => {
           const { files, content } = setupResult;
-          
+
           // Read them back
           const readResults = files.map(file => {
             return readFileContent(`${testDir}/${file}`);
           });
-          
+
           // Verify with searchFiles
           const foundFiles = await searchFiles(`${testDir}/test*.js`);
-          
+
           return { readResults, foundFiles, content };
         },
         expected: {
@@ -407,12 +415,12 @@ describe('File Utils', () => {
 
         if (expected.checkMultipleFiles) {
           const { readResults, foundFiles, content } = testResult;
-          
+
           // Check that all files were read correctly
           readResults.forEach(readContent => {
             expect(readContent).toBe(content);
           });
-          
+
           // Check that searchFiles found all files
           expect(foundFiles).toHaveLength(3);
         }

@@ -69,7 +69,13 @@ describe('Line Utils', () => {
       {
         name: 'should handle alternating consecutive and single lines',
         input: [1, 3, 4, 6, 8, 9, 10, 12],
-        expected: ['line: 1', 'lines: 3-4', 'line: 6', 'lines: 8-10', 'line: 12'],
+        expected: [
+          'line: 1',
+          'lines: 3-4',
+          'line: 6',
+          'lines: 8-10',
+          'line: 12',
+        ],
       },
       {
         name: 'should handle very large line numbers',
@@ -94,18 +100,30 @@ describe('Line Utils', () => {
       {
         name: 'should handle realistic code search scenarios',
         input: [5, 12, 13, 14, 25, 28, 29, 45],
-        expected: ['line: 5', 'lines: 12-14', 'line: 25', 'lines: 28-29', 'line: 45'],
+        expected: [
+          'line: 5',
+          'lines: 12-14',
+          'line: 25',
+          'lines: 28-29',
+          'line: 45',
+        ],
         note: 'Simulate finding matches on various lines in a file',
       },
       {
         name: 'should handle dense consecutive sequences',
         input: [1, 3, 4, 6, 7, 9, 10, 11, 13],
-        expected: ['line: 1', 'lines: 3-4', 'lines: 6-7', 'lines: 9-11', 'line: 13'],
+        expected: [
+          'line: 1',
+          'lines: 3-4',
+          'lines: 6-7',
+          'lines: 9-11',
+          'line: 13',
+        ],
         note: 'Test with many small gaps',
       },
     ];
 
-    testCases.forEach(({ name, input, expected, note }) => {
+    testCases.forEach(({ name, input, expected, note: _ }) => {
       test(name, () => {
         const result = groupConsecutiveLines(input);
         expect(result).toEqual(expected);

@@ -48,7 +48,9 @@ export async function performSearch(
         const lineNumber = beforeMatch.split('\n').length;
 
         // Extract capture groups if any
-        const captureGroups = match.slice(1).filter(group => group !== undefined);
+        const captureGroups = match
+          .slice(1)
+          .filter(group => group !== undefined);
         // Extract the full matched text
         const matchedText = match[0];
 
@@ -63,7 +65,8 @@ export async function performSearch(
             validMatches.push({
               line: lineNumber,
               content: lines[lineNumber - 1],
-              captureGroups: captureGroups.length > 0 ? captureGroups : undefined,
+              captureGroups:
+                captureGroups.length > 0 ? captureGroups : undefined,
               matchedText,
             });
           }
@@ -100,7 +103,10 @@ export interface FormatOptions {
   includeMatchedText?: boolean;
 }
 
-export function formatSearchResults(results: SearchResult[], options?: FormatOptions): string {
+export function formatSearchResults(
+  results: SearchResult[],
+  options?: FormatOptions
+): string {
   if (results.length === 0) {
     return 'No matches found for the given pattern';
   }
@@ -116,24 +122,31 @@ export function formatSearchResults(results: SearchResult[], options?: FormatOpt
   return `Search results:\n${formattedResults.join('\n')}`;
 }
 
-function formatDetailedSearchResults(results: SearchResult[], options: FormatOptions): string {
+function formatDetailedSearchResults(
+  results: SearchResult[],
+  options: FormatOptions
+): string {
   const output: string[] = ['Search results:'];
-  
+
   for (const result of results) {
     output.push(`\n${result.filePath}:`);
-    
+
     for (const match of result.matches) {
       if (options.includeMatchedText) {
         output.push(`  Line ${match.line}: ${match.matchedText}`);
       } else {
         output.push(`  Line ${match.line}: ${match.content}`);
       }
-      
-      if (options.includeCaptureGroups && match.captureGroups && match.captureGroups.length > 0) {
+
+      if (
+        options.includeCaptureGroups &&
+        match.captureGroups &&
+        match.captureGroups.length > 0
+      ) {
         output.push(`    └─ Captured: [${match.captureGroups.join(', ')}]`);
       }
     }
   }
-  
+
   return output.join('\n');
 }

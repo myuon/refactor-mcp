@@ -63,27 +63,27 @@ export async function performRefactor(
           if (contextRegex.test(contextArea)) {
             const lineNumber = beforeMatch.split('\n').length;
             const originalLine = lines[lineNumber - 1];
-            
+
             // Extract capture groups if any
-            const captureGroups = match.slice(1).filter(group => group !== undefined);
+            const captureGroups = match
+              .slice(1)
+              .filter(group => group !== undefined);
 
             const replaced = match[0].replace(
               new RegExp(options.searchPattern),
               options.replacePattern
             );
-            
+
             matchedLines.push({
               line: lineNumber,
               content: originalLine,
               original: match[0],
               replaced,
-              captureGroups: captureGroups.length > 0 ? captureGroups : undefined,
+              captureGroups:
+                captureGroups.length > 0 ? captureGroups : undefined,
             });
 
-            newContent = newContent.replace(
-              match[0],
-              replaced
-            );
+            newContent = newContent.replace(match[0], replaced);
             fileReplacements++;
             modified = true;
           }
@@ -96,15 +96,17 @@ export async function performRefactor(
           const beforeMatch = content.substring(0, match.index);
           const lineNumber = beforeMatch.split('\n').length;
           const originalLine = lines[lineNumber - 1];
-          
+
           // Extract capture groups if any
-          const captureGroups = match.slice(1).filter(group => group !== undefined);
+          const captureGroups = match
+            .slice(1)
+            .filter(group => group !== undefined);
 
           const replaced = match[0].replace(
             new RegExp(options.searchPattern),
             options.replacePattern
           );
-          
+
           matchedLines.push({
             line: lineNumber,
             content: originalLine,
@@ -154,9 +156,8 @@ export function formatRefactorResults(
   options?: RefactorFormatOptions | boolean
 ): string {
   // Handle backward compatibility - if boolean is passed, treat as dryRun
-  const formatOptions: RefactorFormatOptions = typeof options === 'boolean' 
-    ? { dryRun: options }
-    : options || {};
+  const formatOptions: RefactorFormatOptions =
+    typeof options === 'boolean' ? { dryRun: options } : options || {};
   if (results.length === 0) {
     return 'No matches found for the given pattern';
   }
@@ -178,27 +179,43 @@ export function formatRefactorResults(
   return `Refactoring completed:\n${formattedResults.join('\n')}\n\nTotal: ${totalReplacements} replacements in ${results.length} files`;
 }
 
-function formatDetailedRefactorResults(results: RefactorResult[], options: RefactorFormatOptions): string {
-  const output: string[] = [`Refactoring completed${options.dryRun ? ' (dry run)' : ''}:`];
-  
+function formatDetailedRefactorResults(
+  results: RefactorResult[],
+  options: RefactorFormatOptions
+): string {
+  const output: string[] = [
+    `Refactoring completed${options.dryRun ? ' (dry run)' : ''}:`,
+  ];
+
   for (const result of results) {
     output.push(`\n${result.filePath}: ${result.replacements} replacements`);
-    
+
     for (const match of result.matches) {
       if (options.includeMatchedText) {
-        output.push(`  Line ${match.line}: ${match.original} → ${match.replaced}`);
+        output.push(
+          `  Line ${match.line}: ${match.original} → ${match.replaced}`
+        );
       } else {
         output.push(`  Line ${match.line}: ${match.content}`);
       }
-      
-      if (options.includeCaptureGroups && match.captureGroups && match.captureGroups.length > 0) {
+
+      if (
+        options.includeCaptureGroups &&
+        match.captureGroups &&
+        match.captureGroups.length > 0
+      ) {
         output.push(`    └─ Captured: [${match.captureGroups.join(', ')}]`);
       }
     }
   }
 
-  const totalReplacements = results.reduce((sum, result) => sum + result.replacements, 0);
-  output.push(`\nTotal: ${totalReplacements} replacements in ${results.length} files${options.dryRun ? ' (dry run)' : ''}`);
-  
+  const totalReplacements = results.reduce(
+    (sum, result) => sum + result.replacements,
+    0
+  );
+  output.push(
+    `\nTotal: ${totalReplacements} replacements in ${results.length} files${options.dryRun ? ' (dry run)' : ''}`
+  );
+
   return output.join('\n');
 }

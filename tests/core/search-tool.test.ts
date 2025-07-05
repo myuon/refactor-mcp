@@ -167,7 +167,10 @@ legacy_sdk.initialize();`
           resultCount: 1,
           matchCount: 2,
           hasMatchedText: true,
-          expectedMatchedTexts: ['function testFunction(', 'function exportedFunction('],
+          expectedMatchedTexts: [
+            'function testFunction(',
+            'function exportedFunction(',
+          ],
         },
       },
     ];
@@ -203,17 +206,25 @@ legacy_sdk.initialize();`
         }
 
         if (expected.hasImport) {
-          expect(results[0].matches.some(m => m.content.includes('import'))).toBe(true);
+          expect(
+            results[0].matches.some(m => m.content.includes('import'))
+          ).toBe(true);
         }
 
         if (expected.hasVariable) {
           expect(
-            results.some(r => r.matches.some(m => m.content.includes('variable')))
+            results.some(r =>
+              r.matches.some(m => m.content.includes('variable'))
+            )
           ).toBe(true);
         }
 
         if (expected.hasCaptureGroups) {
-          expect(results[0].matches.some(m => m.captureGroups && m.captureGroups.length > 0)).toBe(true);
+          expect(
+            results[0].matches.some(
+              m => m.captureGroups && m.captureGroups.length > 0
+            )
+          ).toBe(true);
         }
 
         if (expected.expectedCaptureGroups) {
@@ -226,14 +237,16 @@ legacy_sdk.initialize();`
         }
 
         if (expected.hasMultipleCaptureGroups) {
-          const hasMultipleGroups = results[0].matches.some(m => 
-            m.captureGroups && m.captureGroups.length > 1
+          const hasMultipleGroups = results[0].matches.some(
+            m => m.captureGroups && m.captureGroups.length > 1
           );
           expect(hasMultipleGroups).toBe(true);
         }
 
         if (expected.hasMatchedText) {
-          expect(results[0].matches.every(m => m.matchedText !== undefined)).toBe(true);
+          expect(
+            results[0].matches.every(m => m.matchedText !== undefined)
+          ).toBe(true);
         }
 
         if (expected.expectedMatchedTexts) {
@@ -259,7 +272,11 @@ legacy_sdk.initialize();`
           });
         },
         expected: {
-          contains: ['Search results:', `${testDir}/test1.js`, '(line: 1, line: 6)'],
+          contains: [
+            'Search results:',
+            `${testDir}/test1.js`,
+            '(line: 1, line: 6)',
+          ],
         },
       },
       {
@@ -319,7 +336,9 @@ const d = 4;`
         }
 
         if (expected.minLines) {
-          expect(formatted.split('\n').length).toBeGreaterThan(expected.minLines);
+          expect(formatted.split('\n').length).toBeGreaterThan(
+            expected.minLines
+          );
         }
       });
     });
