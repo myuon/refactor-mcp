@@ -1,6 +1,9 @@
 # refactor-mcp
 
-A Model Context Protocol (MCP) server that provides powerful refactoring tools for Coding Agents.
+A Model Context Protocol (MCP) server that provides powerful refactoring tools for Coding Agents. It can run in two modes:
+
+- **MCP Server Mode** (default): Integrates with MCP-compatible clients like Claude Code
+- **CLI Mode**: Direct command-line usage for standalone refactoring tasks
 
 ## Features
 
@@ -50,12 +53,23 @@ code_search("foo\\(.+\\)")
 ## Installation
 
 ### Quick Start
+
+**MCP Server Mode** (for Claude Code and other MCP clients):
 ```bash
-# Install globally
+# Install globally for MCP integration
 npm install -g @myuon/refactor-mcp
 
-# Or run directly with npx
+# Or use with npx (recommended for MCP clients)
 npx @myuon/refactor-mcp@latest
+```
+
+**CLI Mode** (for direct command-line usage):
+```bash
+# Search for patterns
+npx @myuon/refactor-mcp@latest cli search -p "function.*\(" -f "src/**/*.js"
+
+# Refactor with preview
+npx @myuon/refactor-mcp@latest cli refactor -s "const (\w+)" -r "let \$1" --dry-run
 ```
 
 ### For Development
@@ -69,26 +83,26 @@ npm install
 ## Usage
 
 ### CLI Mode
-You can use the refactor tools directly from the command line:
+You can use the refactor tools directly from the command line by adding `cli` after the main command:
 
 ```bash
 # Search for patterns
-refactor-cli search -p "function (.*) \{" -f "src/**/*.ts"
+refactor-mcp cli search -p "function (.*) \{" -f "src/**/*.ts"
 
 # Search with matched content display
-refactor-cli search -p "function (.*) \{" -f "src/**/*.ts" --print
+refactor-mcp cli search -p "function (.*) \{" -f "src/**/*.ts" --print
 
 # Refactor with dry-run (preview changes)
-refactor-cli refactor -s "const (\w+) = " -r "let \$1 = " --dry-run
+refactor-mcp cli refactor -s "const (\w+) = " -r "let \$1 = " --dry-run
 
 # Refactor with matched content display
-refactor-cli refactor -s "const (\w+) = " -r "let \$1 = " --print --dry-run
+refactor-mcp cli refactor -s "const (\w+) = " -r "let \$1 = " --print --dry-run
 
 # Refactor with file pattern
-refactor-cli refactor -s "old_function" -r "new_function" -f "src/**/*.js"
+refactor-mcp cli refactor -s "old_function" -r "new_function" -f "src/**/*.js"
 
 # Context-aware refactoring
-refactor-cli refactor -s "legacy_sdk" -r "new_sdk" -c "import" -f "src/**/*.ts"
+refactor-mcp cli refactor -s "legacy_sdk" -r "new_sdk" -c "import" -f "src/**/*.ts"
 ```
 
 **CLI Commands:**
@@ -108,15 +122,27 @@ refactor-cli refactor -s "legacy_sdk" -r "new_sdk" -c "import" -f "src/**/*.ts"
 
 **Important Notes:**
 - When using capture groups in replacement patterns on the command line, escape the dollar sign: `\$1`, `\$2`, etc.
-- Example: `refactor-cli refactor -s "const (\w+) = " -r "let \$1 = " --dry-run`
+- Example: `refactor-mcp cli refactor -s "const (\w+) = " -r "let \$1 = " --dry-run`
 - This prevents the shell from interpreting `$1` as a shell variable
+
+### MCP Server Mode (Default)
+By default, `refactor-mcp` runs as an MCP server via stdio transport:
+
+```bash
+# Run as MCP server (default mode)
+refactor-mcp
+
+# Or explicitly with npx
+npx @myuon/refactor-mcp@latest
+```
 
 ### Development
 ```bash
 npm run dev          # Run server in development mode
-npm run cli          # Run CLI in development mode
+npm run dev:cli      # Run CLI in development mode with arguments
+npm run cli          # Run CLI directly (for testing)
 npm run build        # Build for production
-npm start            # Run built server
+npm start            # Run built server (MCP mode)
 ```
 
 ### Code Quality

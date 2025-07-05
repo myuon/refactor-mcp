@@ -1,6 +1,4 @@
-#!/usr/bin/env node
-
-import { program } from 'commander';
+import { Command } from 'commander';
 import { performSearch } from './core/search-tool.js';
 import { performRefactor } from './core/refactor-tool.js';
 import { readFileContent } from './utils/file-utils.js';
@@ -13,13 +11,16 @@ const packageJson = JSON.parse(
   readFileContent(join(__dirname, '../package.json'))
 );
 
-program
-  .name('refactor-mcp')
-  .description('CLI tool for code refactoring and searching')
-  .version(packageJson.version);
+export async function startCli(args?: string[]) {
+  const program = new Command();
+  
+  program
+    .name('refactor-mcp cli')
+    .description('CLI tool for code refactoring and searching')
+    .version(packageJson.version);
 
-program
-  .command('search')
+  program
+    .command('search')
   .description('Search for code patterns using regex')
   .requiredOption(
     '-p, --pattern <pattern>',
@@ -82,8 +83,8 @@ program
     }
   });
 
-program
-  .command('refactor')
+  program
+    .command('refactor')
   .description(
     'Refactor code by replacing search pattern with replace pattern using regex'
   )
@@ -149,4 +150,18 @@ program
     }
   });
 
-program.parse();
+  if (args) {
+    // Prepend dummy values for 'node' and 'script' to match expected argv format
+    await program.parseAsync(['node', 'cli', ...args]);
+  } else {
+    await program.parseAsync();
+  }
+}
+
+// Allow direct execution
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startCli().catch((error) => {
+    console.error('Error:', error);
+    process.exit(1);
+  });
+}

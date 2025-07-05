@@ -5,8 +5,7 @@
   "main": "dist/server.js",
   "type": "module",
   "bin": {
-    "refactor-mcp": "dist/server.js",
-    "refactor-cli": "dist/cli.js"
+    "refactor-mcp": "dist/index.js"
   },
   "files": [
     "dist/**/*",
@@ -36,8 +35,9 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "tsx src/server.ts",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "dev:cli": "tsx src/index.ts cli",
     "cli": "tsx src/cli.ts",
     "lint": "eslint src/**/*.ts tests/**/*.ts",
     "lint:fix": "eslint src/**/*.ts tests/**/*.ts --fix",
