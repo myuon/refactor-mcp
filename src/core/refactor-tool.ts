@@ -18,6 +18,7 @@ export interface RefactorMatch {
   content: string;
   original: string;
   replaced: string;
+  captureGroups?: string[];
 }
 
 export interface RefactorResult {
@@ -133,17 +134,31 @@ export async function performRefactor(
   return results;
 }
 
+export interface RefactorFormatOptions {
+  includeCaptureGroups?: boolean;
+  includeMatchedText?: boolean;
+  dryRun?: boolean;
+}
+
 export function formatRefactorResults(
   results: RefactorResult[],
-  dryRun: boolean = false
+  options?: RefactorFormatOptions | boolean
 ): string {
+  // Handle backward compatibility - if boolean is passed, treat as dryRun
+  const formatOptions: RefactorFormatOptions = typeof options === 'boolean' 
+    ? { dryRun: options }
+    : options || {};
   if (results.length === 0) {
     return 'No matches found for the given pattern';
   }
 
+  if (formatOptions.includeCaptureGroups || formatOptions.includeMatchedText) {
+    return formatDetailedRefactorResults(results, formatOptions);
+  }
+
   const formattedResults = results.map(
     result =>
-      `${result.filePath}: ${result.replacements} replacements${dryRun ? ' (dry run)' : ''}`
+      `${result.filePath}: ${result.replacements} replacements${formatOptions.dryRun ? ' (dry run)' : ''}`
   );
 
   const totalReplacements = results.reduce(
@@ -152,4 +167,29 @@ export function formatRefactorResults(
   );
 
   return `Refactoring completed:\n${formattedResults.join('\n')}\n\nTotal: ${totalReplacements} replacements in ${results.length} files`;
+}
+
+function formatDetailedRefactorResults(results: RefactorResult[], options: RefactorFormatOptions): string {
+  const output: string[] = [`Refactoring completed${options.dryRun ? ' (dry run)' : ''}:`];
+  
+  for (const result of results) {
+    output.push(`\n${result.filePath}: ${result.replacements} replacements`);
+    
+    for (const match of result.matches) {
+      if (options.includeMatchedText) {
+        output.push(`  Line ${match.line}: ${match.original} → ${match.replaced}`);
+      } else {
+        output.push(`  Line ${match.line}: ${match.content}`);
+      }
+      
+      if (options.includeCaptureGroups && match.captureGroups && match.captureGroups.length > 0) {
+        output.push(`    └─ Captured: [${match.captureGroups.join(', ')}]`);
+      }
+    }
+  }
+
+  const totalReplacements = results.reduce((sum, result) => sum + result.replacements, 0);
+  output.push(`\nTotal: ${totalReplacements} replacements in ${results.length} files${options.dryRun ? ' (dry run)' : ''}`);
+  
+  return output.join('\n');
 }

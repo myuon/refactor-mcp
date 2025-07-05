@@ -14,6 +14,8 @@ import {
   searchFiles,
   groupConsecutiveLines,
 } from '../src/server.js';
+import { performSearch, formatSearchResults } from '../src/core/search-tool.js';
+import { performRefactor, formatRefactorResults } from '../src/core/refactor-tool.js';
 
 describe('MCP Refactor Server', () => {
   const testFilePath = 'test-file.js';
@@ -677,6 +679,107 @@ const legacy_sdk = "not in import";`;
       // Should not include root files
       expect(appFiles).not.toContain(`${testDir}/root.js`);
       expect(utilFiles).not.toContain(`${testDir}/root.js`);
+    });
+  });
+
+  describe('MCP Server Format Options', () => {
+    beforeEach(() => {
+      mkdirSync(testDir, { recursive: true });
+      writeFileSync(
+        `${testDir}/test-format.js`,
+        `function testFunction() {
+  const variable = 'test';
+  return variable;
+}
+
+export function exportedFunction() {
+  console.log('exported');
+  return 'result';
+}`
+      );
+    });
+
+    test('should format search results with capture groups', async () => {
+      const results = await performSearch({
+        searchPattern: 'function (\\w+)\\(',
+        filePattern: `${testDir}/**/*.js`,
+      });
+
+      const formattedWithCapture = formatSearchResults(results, {
+        includeCaptureGroups: true,
+      });
+
+      expect(formattedWithCapture).toContain('Search results:');
+      expect(formattedWithCapture).toContain(`${testDir}/test-format.js:`);
+      expect(formattedWithCapture).toContain('Line 1:');
+      expect(formattedWithCapture).toContain('Line 6:');
+      expect(formattedWithCapture).toContain('└─ Captured: [testFunction]');
+      expect(formattedWithCapture).toContain('└─ Captured: [exportedFunction]');
+    });
+
+    test('should format search results with matched text', async () => {
+      const results = await performSearch({
+        searchPattern: 'function (\\w+)\\(',
+        filePattern: `${testDir}/**/*.js`,
+      });
+
+      const formattedWithMatched = formatSearchResults(results, {
+        includeMatchedText: true,
+      });
+
+      expect(formattedWithMatched).toContain('Search results:');
+      expect(formattedWithMatched).toContain('Line 1: function testFunction(');
+      expect(formattedWithMatched).toContain('Line 6: function exportedFunction(');
+    });
+
+    test('should format search results with both options', async () => {
+      const results = await performSearch({
+        searchPattern: 'function (\\w+)\\(',
+        filePattern: `${testDir}/**/*.js`,
+      });
+
+      const formattedWithBoth = formatSearchResults(results, {
+        includeCaptureGroups: true,
+        includeMatchedText: true,
+      });
+
+      expect(formattedWithBoth).toContain('Line 1: function testFunction(');
+      expect(formattedWithBoth).toContain('└─ Captured: [testFunction]');
+      expect(formattedWithBoth).toContain('Line 6: function exportedFunction(');
+      expect(formattedWithBoth).toContain('└─ Captured: [exportedFunction]');
+    });
+
+    test('should format refactor results with capture groups', async () => {
+      const results = await performRefactor({
+        searchPattern: 'const (\\w+) = ',
+        replacePattern: 'let $1 = ',
+        filePattern: `${testDir}/**/*.js`,
+        dryRun: true,
+      });
+
+      const formattedWithCapture = formatRefactorResults(results, {
+        includeCaptureGroups: true,
+        dryRun: true,
+      });
+
+      expect(formattedWithCapture).toContain('Refactoring completed (dry run):');
+      expect(formattedWithCapture).toContain(`${testDir}/test-format.js:`);
+      expect(formattedWithCapture).toContain('Line 2:');
+    });
+
+    test('should maintain backward compatibility for boolean parameter', async () => {
+      const results = await performRefactor({
+        searchPattern: 'const (\\w+) = ',
+        replacePattern: 'let $1 = ',
+        filePattern: `${testDir}/**/*.js`,
+        dryRun: true,
+      });
+
+      const formattedOldWay = formatRefactorResults(results, true);
+
+      expect(formattedOldWay).toContain('Refactoring completed:');
+      expect(formattedOldWay).toContain('(dry run)');
+      expect(formattedOldWay).toContain('replacements in');
     });
   });
 });

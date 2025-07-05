@@ -39,6 +39,14 @@ server.registerTool(
         .string()
         .optional()
         .describe('Optional file glob pattern to limit search scope'),
+      include_capture_groups: z
+        .boolean()
+        .optional()
+        .describe('Include capture groups in the results'),
+      include_matched_text: z
+        .boolean()
+        .optional()
+        .describe('Include matched text in the results'),
     },
   },
   async ({
@@ -46,6 +54,8 @@ server.registerTool(
     replace_pattern,
     context_pattern,
     file_pattern,
+    include_capture_groups,
+    include_matched_text,
   }) => {
     try {
       const results = await performRefactor({
@@ -56,7 +66,11 @@ server.registerTool(
         dryRun: false,
       });
 
-      const summary = formatRefactorResults(results);
+      const summary = formatRefactorResults(results, {
+        includeCaptureGroups: include_capture_groups,
+        includeMatchedText: include_matched_text,
+        dryRun: false,
+      });
 
       return {
         content: [{ type: 'text', text: summary }],
@@ -88,9 +102,17 @@ server.registerTool(
         .string()
         .optional()
         .describe('Optional file glob pattern to limit search scope'),
+      include_capture_groups: z
+        .boolean()
+        .optional()
+        .describe('Include capture groups in the results'),
+      include_matched_text: z
+        .boolean()
+        .optional()
+        .describe('Include matched text in the results'),
     },
   },
-  async ({ search_pattern, context_pattern, file_pattern }) => {
+  async ({ search_pattern, context_pattern, file_pattern, include_capture_groups, include_matched_text }) => {
     try {
       const results = await performSearch({
         searchPattern: search_pattern,
@@ -98,7 +120,10 @@ server.registerTool(
         filePattern: file_pattern,
       });
 
-      const summary = formatSearchResults(results);
+      const summary = formatSearchResults(results, {
+        includeCaptureGroups: include_capture_groups,
+        includeMatchedText: include_matched_text,
+      });
 
       return {
         content: [{ type: 'text', text: summary }],

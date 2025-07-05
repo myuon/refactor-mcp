@@ -95,9 +95,18 @@ export async function performSearch(
   return results;
 }
 
-export function formatSearchResults(results: SearchResult[]): string {
+export interface FormatOptions {
+  includeCaptureGroups?: boolean;
+  includeMatchedText?: boolean;
+}
+
+export function formatSearchResults(results: SearchResult[], options?: FormatOptions): string {
   if (results.length === 0) {
     return 'No matches found for the given pattern';
+  }
+
+  if (options?.includeCaptureGroups || options?.includeMatchedText) {
+    return formatDetailedSearchResults(results, options);
   }
 
   const formattedResults = results.map(
@@ -105,4 +114,26 @@ export function formatSearchResults(results: SearchResult[]): string {
   );
 
   return `Search results:\n${formattedResults.join('\n')}`;
+}
+
+function formatDetailedSearchResults(results: SearchResult[], options: FormatOptions): string {
+  const output: string[] = ['Search results:'];
+  
+  for (const result of results) {
+    output.push(`\n${result.filePath}:`);
+    
+    for (const match of result.matches) {
+      if (options.includeMatchedText) {
+        output.push(`  Line ${match.line}: ${match.matchedText}`);
+      } else {
+        output.push(`  Line ${match.line}: ${match.content}`);
+      }
+      
+      if (options.includeCaptureGroups && match.captureGroups && match.captureGroups.length > 0) {
+        output.push(`    └─ Captured: [${match.captureGroups.join(', ')}]`);
+      }
+    }
+  }
+  
+  return output.join('\n');
 }
