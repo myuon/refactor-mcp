@@ -1,13 +1,9 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
-import {
-  searchFiles,
-  readFileContent,
-  writeFileContent,
-  groupConsecutiveLines,
-} from './server.js';
-import { existsSync } from 'fs';
+import { performSearch } from './core/search-tool.js';
+import { performRefactor } from './core/refactor-tool.js';
+import { readFileContent } from './utils/file-utils.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -40,75 +36,26 @@ program
   .option('--print', 'Print matched content to stdout')
   .action(async options => {
     try {
-      const files = await searchFiles(options.files);
-      const results: string[] = [];
+      const results = await performSearch({
+        searchPattern: options.pattern,
+        contextPattern: options.context,
+        filePattern: options.files,
+      });
 
-      const searchRegex = new RegExp(options.pattern, 'gm');
-      const contextRegex = options.context
-        ? new RegExp(options.context, 'gm')
-        : null;
-
-      for (const filePath of files) {
-        if (!existsSync(filePath)) continue;
-
-        const content = readFileContent(filePath);
-        const lines = content.split('\n');
-
-        const matches = [...content.matchAll(searchRegex)];
-        const validMatches: { line: number; content: string }[] = [];
-
-        for (const match of matches) {
-          if (match.index !== undefined) {
-            const beforeMatch = content.substring(0, match.index);
-            const lineNumber = beforeMatch.split('\n').length;
-
-            if (contextRegex) {
-              const beforeMatchLines = beforeMatch
-                .split('\n')
-                .slice(-5)
-                .join('\n');
-              const afterMatchIndex = match.index + match[0].length;
-              const afterMatch = content.substring(afterMatchIndex);
-              const afterMatchLines = afterMatch
-                .split('\n')
-                .slice(0, 5)
-                .join('\n');
-              const contextArea = beforeMatchLines + match[0] + afterMatchLines;
-
-              if (contextRegex.test(contextArea)) {
-                validMatches.push({
-                  line: lineNumber,
-                  content: lines[lineNumber - 1],
-                });
-              }
-            } else {
-              validMatches.push({
-                line: lineNumber,
-                content: lines[lineNumber - 1],
-              });
-            }
-          }
-        }
-
-        if (validMatches.length > 0) {
-          const uniqueLineNumbers = [...new Set(validMatches.map(m => m.line))];
-          const lineNumbers = uniqueLineNumbers.sort((a, b) => a - b);
-
-          const groupedLines = groupConsecutiveLines(lineNumbers);
-          results.push(`${filePath} (${groupedLines.join(', ')})`);
-
-          if (options.print) {
-            console.log(`\n=== ${filePath} ===`);
-            for (const match of validMatches) {
-              console.log(`${match.line}:${match.content}`);
-            }
+      if (options.print && results.length > 0) {
+        for (const result of results) {
+          console.log(`\n=== ${result.filePath} ===`);
+          for (const match of result.matches) {
+            console.log(`${match.line}:${match.content}`);
           }
         }
       }
 
       if (results.length > 0) {
         console.log('Search results:');
-        results.forEach(result => console.log(result));
+        results.forEach(result => 
+          console.log(`${result.filePath} (${result.groupedLines.join(', ')})`)
+        );
       } else {
         console.log('No matches found for the given pattern');
       }
@@ -147,131 +94,32 @@ program
   .option('--print', 'Print matched content to stdout')
   .action(async options => {
     try {
-      const files = await searchFiles(options.files);
-      const results: string[] = [];
-      let totalReplacements = 0;
+      const results = await performRefactor({
+        searchPattern: options.search,
+        replacePattern: options.replace,
+        contextPattern: options.context,
+        filePattern: options.files,
+        dryRun: !!options.dryRun,
+      });
 
-      for (const filePath of files) {
-        if (!existsSync(filePath)) continue;
-
-        const content = readFileContent(filePath);
-        const lines = content.split('\n');
-        let modified = false;
-        let fileReplacements = 0;
-        const matchedLines: {
-          line: number;
-          content: string;
-          original: string;
-          replaced: string;
-        }[] = [];
-
-        const searchRegex = new RegExp(options.search, 'g');
-        const contextRegex = options.context
-          ? new RegExp(options.context, 'g')
-          : null;
-
-        let newContent = content;
-
-        if (contextRegex) {
-          const matches = [...content.matchAll(searchRegex)];
-          for (const match of matches) {
-            if (match.index !== undefined) {
-              const beforeMatch = content.substring(0, match.index);
-              const afterMatch = content.substring(
-                match.index + match[0].length
-              );
-              const contextBefore = beforeMatch
-                .split('\n')
-                .slice(-5)
-                .join('\n');
-              const contextAfter = afterMatch
-                .split('\n')
-                .slice(0, 5)
-                .join('\n');
-              const contextArea = contextBefore + match[0] + contextAfter;
-
-              if (contextRegex.test(contextArea)) {
-                const lineNumber = beforeMatch.split('\n').length;
-                const originalLine = lines[lineNumber - 1];
-
-                if (options.print) {
-                  matchedLines.push({
-                    line: lineNumber,
-                    content: originalLine,
-                    original: match[0],
-                    replaced: match[0].replace(
-                      new RegExp(options.search),
-                      options.replace
-                    ),
-                  });
-                }
-
-                newContent = newContent.replace(
-                  match[0],
-                  match[0].replace(new RegExp(options.search), options.replace)
-                );
-                fileReplacements++;
-                modified = true;
-              }
-            }
-          }
-        } else {
-          const matches = [...content.matchAll(searchRegex)];
-          for (const match of matches) {
-            if (match.index !== undefined) {
-              const beforeMatch = content.substring(0, match.index);
-              const lineNumber = beforeMatch.split('\n').length;
-              const originalLine = lines[lineNumber - 1];
-
-              if (options.print) {
-                matchedLines.push({
-                  line: lineNumber,
-                  content: originalLine,
-                  original: match[0],
-                  replaced: match[0].replace(
-                    new RegExp(options.search),
-                    options.replace
-                  ),
-                });
-              }
-            }
-          }
-
-          const replacedContent = content.replace(searchRegex, options.replace);
-          if (replacedContent !== content) {
-            newContent = replacedContent;
-            fileReplacements = (content.match(searchRegex) || []).length;
-            modified = true;
-          }
-        }
-
-        if (modified) {
-          if (options.dryRun) {
-            results.push(
-              `${filePath}: ${fileReplacements} replacements (dry run)`
-            );
-          } else {
-            writeFileContent(filePath, newContent);
-            results.push(`${filePath}: ${fileReplacements} replacements`);
-          }
-          totalReplacements += fileReplacements;
-
-          if (options.print && matchedLines.length > 0) {
-            console.log(`\n=== ${filePath} ===`);
-            for (const match of matchedLines) {
-              console.log(`${match.line}:${match.content}`);
-              console.log(`   - ${match.original} → ${match.replaced}`);
-            }
+      if (options.print && results.length > 0) {
+        for (const result of results) {
+          console.log(`\n=== ${result.filePath} ===`);
+          for (const match of result.matches) {
+            console.log(`${match.line}:${match.content}`);
+            console.log(`   - ${match.original} → ${match.replaced}`);
           }
         }
       }
 
       if (results.length > 0) {
         console.log('Refactoring completed:');
-        results.forEach(result => console.log(result));
-        console.log(
-          `\nTotal: ${totalReplacements} replacements in ${results.length} files`
+        results.forEach(result => 
+          console.log(`${result.filePath}: ${result.replacements} replacements${options.dryRun ? ' (dry run)' : ''}`)
         );
+        
+        const totalReplacements = results.reduce((sum, result) => sum + result.replacements, 0);
+        console.log(`\nTotal: ${totalReplacements} replacements in ${results.length} files`);
       } else {
         console.log('No matches found for the given pattern');
       }

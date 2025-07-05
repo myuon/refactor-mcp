@@ -3,100 +3,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { readFileSync, writeFileSync, existsSync, statSync } from 'fs';
-import { glob } from 'glob';
+import { performSearch, formatSearchResults } from './core/search-tool.js';
+import { performRefactor, formatRefactorResults } from './core/refactor-tool.js';
+
+// Re-export for backward compatibility
+export { searchFiles, readFileContent, writeFileContent } from './utils/file-utils.js';
+export { groupConsecutiveLines } from './utils/line-utils.js';
 
 const server = new McpServer({
   name: 'refactor-mcp',
   version: '1.0.0',
 });
 
-// Helper function to search files based on pattern
-export async function searchFiles(filePattern?: string): Promise<string[]> {
-  if (!filePattern) {
-    // Default to all files in current directory and subdirectories
-    return await glob('**/*', {
-      ignore: ['node_modules/**', 'dist/**', '.git/**'],
-      nodir: true,
-    });
-  }
-
-  let pattern = filePattern;
-
-  // Check if the pattern is a directory without glob syntax
-  if (
-    !pattern.includes('*') &&
-    !pattern.includes('?') &&
-    !pattern.includes('[')
-  ) {
-    try {
-      if (existsSync(pattern) && statSync(pattern).isDirectory()) {
-        // If it's a directory, append /** to search all files in it
-        pattern = pattern.endsWith('/') ? `${pattern}**` : `${pattern}/**`;
-      }
-    } catch {
-      // If stat fails, use the pattern as-is
-    }
-  }
-
-  return await glob(pattern, {
-    ignore: ['node_modules/**', 'dist/**', '.git/**'],
-    nodir: true,
-  });
-}
-
-// Helper function to read file content safely
-export function readFileContent(filePath: string): string {
-  try {
-    return readFileSync(filePath, 'utf-8');
-  } catch (error) {
-    throw new Error(`Failed to read file ${filePath}: ${error}`);
-  }
-}
-
-// Helper function to write file content safely
-export function writeFileContent(filePath: string, content: string): void {
-  try {
-    writeFileSync(filePath, content, 'utf-8');
-  } catch (error) {
-    throw new Error(`Failed to write file ${filePath}: ${error}`);
-  }
-}
-
-// Helper function to group consecutive line numbers
-export function groupConsecutiveLines(lineNumbers: number[]): string[] {
-  if (lineNumbers.length === 0) return [];
-  if (lineNumbers.length === 1) return [`line: ${lineNumbers[0]}`];
-
-  const groups: string[] = [];
-  let start = lineNumbers[0];
-  let end = lineNumbers[0];
-
-  for (let i = 1; i < lineNumbers.length; i++) {
-    if (lineNumbers[i] === end + 1) {
-      // Consecutive number, extend the range
-      end = lineNumbers[i];
-    } else {
-      // Non-consecutive, finalize the current group
-      if (start === end) {
-        groups.push(`line: ${start}`);
-      } else {
-        groups.push(`lines: ${start}-${end}`);
-      }
-      start = lineNumbers[i];
-      end = lineNumbers[i];
-    }
-  }
-
-  // Add the last group
-  if (start === end) {
-    groups.push(`line: ${start}`);
-  } else {
-    groups.push(`lines: ${start}-${end}`);
-  }
-
-  return groups;
-}
 
 server.registerTool(
   'code_refactor',
@@ -130,74 +48,15 @@ server.registerTool(
     file_pattern,
   }) => {
     try {
-      const files = await searchFiles(file_pattern);
-      const results: string[] = [];
-      let totalReplacements = 0;
+      const results = await performRefactor({
+        searchPattern: search_pattern,
+        replacePattern: replace_pattern,
+        contextPattern: context_pattern,
+        filePattern: file_pattern,
+        dryRun: false,
+      });
 
-      for (const filePath of files) {
-        if (!existsSync(filePath)) continue;
-
-        const content = readFileContent(filePath);
-        let modified = false;
-        let fileReplacements = 0;
-
-        const searchRegex = new RegExp(search_pattern, 'g');
-        const contextRegex = context_pattern
-          ? new RegExp(context_pattern, 'g')
-          : null;
-
-        let newContent = content;
-
-        if (contextRegex) {
-          // Apply context filtering
-          const matches = [...content.matchAll(searchRegex)];
-          for (const match of matches) {
-            if (match.index !== undefined) {
-              const beforeMatch = content.substring(0, match.index);
-              const afterMatch = content.substring(
-                match.index + match[0].length
-              );
-              const contextBefore = beforeMatch
-                .split('\n')
-                .slice(-5)
-                .join('\n');
-              const contextAfter = afterMatch
-                .split('\n')
-                .slice(0, 5)
-                .join('\n');
-              const contextArea = contextBefore + match[0] + contextAfter;
-
-              if (contextRegex.test(contextArea)) {
-                newContent = newContent.replace(
-                  match[0],
-                  match[0].replace(new RegExp(search_pattern), replace_pattern)
-                );
-                fileReplacements++;
-                modified = true;
-              }
-            }
-          }
-        } else {
-          // Simple replacement without context
-          const replacedContent = content.replace(searchRegex, replace_pattern);
-          if (replacedContent !== content) {
-            newContent = replacedContent;
-            fileReplacements = (content.match(searchRegex) || []).length;
-            modified = true;
-          }
-        }
-
-        if (modified) {
-          writeFileContent(filePath, newContent);
-          results.push(`${filePath}: ${fileReplacements} replacements`);
-          totalReplacements += fileReplacements;
-        }
-      }
-
-      const summary =
-        results.length > 0
-          ? `Refactoring completed:\n${results.join('\n')}\n\nTotal: ${totalReplacements} replacements in ${results.length} files`
-          : 'No matches found for the given pattern';
+      const summary = formatRefactorResults(results);
 
       return {
         content: [{ type: 'text', text: summary }],
@@ -233,70 +92,13 @@ server.registerTool(
   },
   async ({ search_pattern, context_pattern, file_pattern }) => {
     try {
-      const files = await searchFiles(file_pattern);
-      const results: string[] = [];
+      const results = await performSearch({
+        searchPattern: search_pattern,
+        contextPattern: context_pattern,
+        filePattern: file_pattern,
+      });
 
-      const searchRegex = new RegExp(search_pattern, 'gm');
-      const contextRegex = context_pattern
-        ? new RegExp(context_pattern, 'gm')
-        : null;
-
-      for (const filePath of files) {
-        if (!existsSync(filePath)) continue;
-
-        const content = readFileContent(filePath);
-        const lines = content.split('\n');
-
-        const matches = [...content.matchAll(searchRegex)];
-        const validMatches: { line: number; content: string }[] = [];
-
-        for (const match of matches) {
-          if (match.index !== undefined) {
-            const beforeMatch = content.substring(0, match.index);
-            const lineNumber = beforeMatch.split('\n').length;
-
-            if (contextRegex) {
-              const beforeMatchLines = beforeMatch
-                .split('\n')
-                .slice(-5)
-                .join('\n');
-              const afterMatchIndex = match.index + match[0].length;
-              const afterMatch = content.substring(afterMatchIndex);
-              const afterMatchLines = afterMatch
-                .split('\n')
-                .slice(0, 5)
-                .join('\n');
-              const contextArea = beforeMatchLines + match[0] + afterMatchLines;
-
-              if (contextRegex.test(contextArea)) {
-                validMatches.push({
-                  line: lineNumber,
-                  content: lines[lineNumber - 1],
-                });
-              }
-            } else {
-              validMatches.push({
-                line: lineNumber,
-                content: lines[lineNumber - 1],
-              });
-            }
-          }
-        }
-
-        if (validMatches.length > 0) {
-          // Use Set to remove duplicate line numbers
-          const uniqueLineNumbers = [...new Set(validMatches.map(m => m.line))];
-          const lineNumbers = uniqueLineNumbers.sort((a, b) => a - b);
-
-          const groupedLines = groupConsecutiveLines(lineNumbers);
-          results.push(`${filePath} (${groupedLines.join(', ')})`);
-        }
-      }
-
-      const summary =
-        results.length > 0
-          ? `Search results:\n${results.join('\n')}`
-          : 'No matches found for the given pattern';
+      const summary = formatSearchResults(results);
 
       return {
         content: [{ type: 'text', text: summary }],
