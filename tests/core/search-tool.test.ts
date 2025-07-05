@@ -59,167 +59,271 @@ legacy_sdk.initialize();`
   });
 
   describe('performSearch', () => {
-    test('should find basic function patterns', async () => {
-      const results = await performSearch({
-        searchPattern: 'function.*\\(',
-        filePattern: `${testDir}/**/*.js`,
+    const testCases = [
+      {
+        name: 'should find basic function patterns',
+        options: {
+          searchPattern: 'function.*\\(',
+          filePattern: `${testDir}/**/*.js`,
+        },
+        expected: {
+          resultCount: 1,
+          filePath: `${testDir}/test1.js`,
+          matchCount: 2,
+          lineNumbers: [1, 6],
+          groupedLines: ['line: 1', 'line: 6'],
+        },
+      },
+      {
+        name: 'should find patterns with file filtering',
+        options: {
+          searchPattern: 'export.*',
+          filePattern: `${testDir}/**/*.{js,ts}`,
+        },
+        expected: {
+          resultCount: 2,
+          hasTest1: true,
+          hasTest2: true,
+        },
+      },
+      {
+        name: 'should work with context filtering',
+        options: {
+          searchPattern: 'legacy_sdk',
+          contextPattern: 'import',
+          filePattern: `${testDir}/context-test.js`,
+        },
+        expected: {
+          resultCount: 1,
+          matchCount: 2,
+          hasImport: true,
+        },
+      },
+      {
+        name: 'should return empty results when no matches found',
+        options: {
+          searchPattern: 'nonexistent.*pattern',
+          filePattern: `${testDir}/**/*.js`,
+        },
+        expected: {
+          resultCount: 0,
+        },
+      },
+      {
+        name: 'should handle regex special characters',
+        options: {
+          searchPattern: 'TestInterface\\s*\\{',
+          filePattern: `${testDir}/**/*.ts`,
+        },
+        expected: {
+          resultCount: 1,
+          matchCount: 2,
+        },
+      },
+      {
+        name: 'should find patterns across multiple lines',
+        options: {
+          searchPattern: 'const.*=',
+          filePattern: `${testDir}/**/*.js`,
+        },
+        expected: {
+          resultCount: 2,
+          hasVariable: true,
+        },
+      },
+    ];
+
+    testCases.forEach(({ name, options, expected }) => {
+      test(name, async () => {
+        const results = await performSearch(options);
+
+        expect(results).toHaveLength(expected.resultCount);
+
+        if (expected.filePath) {
+          expect(results[0].filePath).toBe(expected.filePath);
+        }
+
+        if (expected.matchCount) {
+          expect(results[0].matches).toHaveLength(expected.matchCount);
+        }
+
+        if (expected.lineNumbers) {
+          expect(results[0].lineNumbers).toEqual(expected.lineNumbers);
+        }
+
+        if (expected.groupedLines) {
+          expect(results[0].groupedLines).toEqual(expected.groupedLines);
+        }
+
+        if (expected.hasTest1) {
+          expect(results.some(r => r.filePath.endsWith('test1.js'))).toBe(true);
+        }
+
+        if (expected.hasTest2) {
+          expect(results.some(r => r.filePath.endsWith('test2.ts'))).toBe(true);
+        }
+
+        if (expected.hasImport) {
+          expect(results[0].matches.some(m => m.content.includes('import'))).toBe(true);
+        }
+
+        if (expected.hasVariable) {
+          expect(
+            results.some(r => r.matches.some(m => m.content.includes('variable')))
+          ).toBe(true);
+        }
       });
-
-      expect(results).toHaveLength(1);
-      expect(results[0].filePath).toBe(`${testDir}/test1.js`);
-      expect(results[0].matches).toHaveLength(2);
-      expect(results[0].lineNumbers).toEqual([1, 6]);
-      expect(results[0].groupedLines).toEqual(['line: 1', 'line: 6']);
-    });
-
-    test('should find patterns with file filtering', async () => {
-      const results = await performSearch({
-        searchPattern: 'export.*',
-        filePattern: `${testDir}/**/*.{js,ts}`,
-      });
-
-      expect(results).toHaveLength(2);
-      expect(results.some(r => r.filePath.endsWith('test1.js'))).toBe(true);
-      expect(results.some(r => r.filePath.endsWith('test2.ts'))).toBe(true);
-    });
-
-    test('should work with context filtering', async () => {
-      const results = await performSearch({
-        searchPattern: 'legacy_sdk',
-        contextPattern: 'import',
-        filePattern: `${testDir}/context-test.js`,
-      });
-
-      expect(results).toHaveLength(1);
-      expect(results[0].matches).toHaveLength(2); // import line and initialize line
-      expect(results[0].matches.some(m => m.content.includes('import'))).toBe(
-        true
-      );
-    });
-
-    test('should return empty results when no matches found', async () => {
-      const results = await performSearch({
-        searchPattern: 'nonexistent.*pattern',
-        filePattern: `${testDir}/**/*.js`,
-      });
-
-      expect(results).toHaveLength(0);
-    });
-
-    test('should handle regex special characters', async () => {
-      const results = await performSearch({
-        searchPattern: 'TestInterface\\s*\\{',
-        filePattern: `${testDir}/**/*.ts`,
-      });
-
-      expect(results).toHaveLength(1);
-      expect(results[0].matches).toHaveLength(2); // Both interface and class have TestInterface
-    });
-
-    test('should find patterns across multiple lines', async () => {
-      const results = await performSearch({
-        searchPattern: 'const.*=',
-        filePattern: `${testDir}/**/*.js`,
-      });
-
-      expect(results).toHaveLength(2); // test1.js and context-test.js
-      expect(
-        results.some(r => r.matches.some(m => m.content.includes('variable')))
-      ).toBe(true);
     });
   });
 
   describe('formatSearchResults', () => {
-    test('should format single result correctly', async () => {
-      const results = await performSearch({
-        searchPattern: 'function',
-        filePattern: `${testDir}/test1.js`,
-      });
-
-      const formatted = formatSearchResults(results);
-      expect(formatted).toContain('Search results:');
-      expect(formatted).toContain(`${testDir}/test1.js`);
-      expect(formatted).toContain('(line: 1, line: 6)');
-    });
-
-    test('should format empty results correctly', () => {
-      const formatted = formatSearchResults([]);
-      expect(formatted).toBe('No matches found for the given pattern');
-    });
-
-    test('should format multiple results correctly', async () => {
-      const results = await performSearch({
-        searchPattern: 'export',
-        filePattern: `${testDir}/**/*.{js,ts}`,
-      });
-
-      const formatted = formatSearchResults(results);
-      expect(formatted).toContain('Search results:');
-      expect(formatted.split('\n').length).toBeGreaterThan(2);
-    });
-
-    test('should handle consecutive line numbers correctly', async () => {
-      // Create a file with consecutive matches
-      writeFileSync(
-        `${testDir}/consecutive.js`,
-        `const a = 1;
+    const testCases = [
+      {
+        name: 'should format single result correctly',
+        setupFn: async () => {
+          return await performSearch({
+            searchPattern: 'function',
+            filePattern: `${testDir}/test1.js`,
+          });
+        },
+        expected: {
+          contains: ['Search results:', `${testDir}/test1.js`, '(line: 1, line: 6)'],
+        },
+      },
+      {
+        name: 'should format empty results correctly',
+        setupFn: () => [],
+        expected: {
+          equals: 'No matches found for the given pattern',
+        },
+      },
+      {
+        name: 'should format multiple results correctly',
+        setupFn: async () => {
+          return await performSearch({
+            searchPattern: 'export',
+            filePattern: `${testDir}/**/*.{js,ts}`,
+          });
+        },
+        expected: {
+          contains: ['Search results:'],
+          minLines: 2,
+        },
+      },
+      {
+        name: 'should handle consecutive line numbers correctly',
+        setupFn: async () => {
+          writeFileSync(
+            `${testDir}/consecutive.js`,
+            `const a = 1;
 const b = 2;
 const c = 3;
 const d = 4;`
-      );
+          );
+          return await performSearch({
+            searchPattern: 'const.*=',
+            filePattern: `${testDir}/consecutive.js`,
+          });
+        },
+        expected: {
+          contains: ['lines: 1-4'],
+        },
+      },
+    ];
 
-      const results = await performSearch({
-        searchPattern: 'const.*=',
-        filePattern: `${testDir}/consecutive.js`,
+    testCases.forEach(({ name, setupFn, expected }) => {
+      test(name, async () => {
+        const results = await setupFn();
+        const formatted = formatSearchResults(results);
+
+        if (expected.equals) {
+          expect(formatted).toBe(expected.equals);
+        }
+
+        if (expected.contains) {
+          expected.contains.forEach(text => {
+            expect(formatted).toContain(text);
+          });
+        }
+
+        if (expected.minLines) {
+          expect(formatted.split('\n').length).toBeGreaterThan(expected.minLines);
+        }
       });
-
-      const formatted = formatSearchResults(results);
-      expect(formatted).toContain('lines: 1-4');
     });
   });
 
   describe('edge cases', () => {
-    test('should handle files with no content', async () => {
-      writeFileSync(`${testDir}/empty.js`, '');
-
-      const results = await performSearch({
-        searchPattern: 'anything',
-        filePattern: `${testDir}/empty.js`,
-      });
-
-      expect(results).toHaveLength(0);
-    });
-
-    test('should handle invalid regex gracefully', async () => {
-      await expect(
-        performSearch({
+    const testCases = [
+      {
+        name: 'should handle files with no content',
+        setupFn: () => {
+          writeFileSync(`${testDir}/empty.js`, '');
+        },
+        options: {
+          searchPattern: 'anything',
+          filePattern: `${testDir}/empty.js`,
+        },
+        expected: {
+          resultCount: 0,
+        },
+      },
+      {
+        name: 'should handle invalid regex gracefully',
+        setupFn: null,
+        options: {
           searchPattern: '[invalid regex',
           filePattern: `${testDir}/**/*.js`,
-        })
-      ).rejects.toThrow();
-    });
+        },
+        expected: {
+          shouldThrow: true,
+        },
+      },
+      {
+        name: 'should handle non-existent file patterns',
+        setupFn: null,
+        options: {
+          searchPattern: 'function',
+          filePattern: 'non-existent/**/*.js',
+        },
+        expected: {
+          resultCount: 0,
+        },
+      },
+      {
+        name: 'should handle large files efficiently',
+        setupFn: () => {
+          const largeContent = 'function test() {}\n'.repeat(1000);
+          writeFileSync(`${testDir}/large.js`, largeContent);
+        },
+        options: {
+          searchPattern: 'function test',
+          filePattern: `${testDir}/large.js`,
+        },
+        expected: {
+          resultCount: 1,
+          matchCount: 1000,
+        },
+      },
+    ];
 
-    test('should handle non-existent file patterns', async () => {
-      const results = await performSearch({
-        searchPattern: 'function',
-        filePattern: 'non-existent/**/*.js',
+    testCases.forEach(({ name, setupFn, options, expected }) => {
+      test(name, async () => {
+        if (setupFn) {
+          setupFn();
+        }
+
+        if (expected.shouldThrow) {
+          await expect(performSearch(options)).rejects.toThrow();
+        } else {
+          const results = await performSearch(options);
+          expect(results).toHaveLength(expected.resultCount);
+
+          if (expected.matchCount) {
+            expect(results[0].matches).toHaveLength(expected.matchCount);
+          }
+        }
       });
-
-      expect(results).toHaveLength(0);
-    });
-
-    test('should handle large files efficiently', async () => {
-      // Create a large file
-      const largeContent = 'function test() {}\n'.repeat(1000);
-      writeFileSync(`${testDir}/large.js`, largeContent);
-
-      const results = await performSearch({
-        searchPattern: 'function test',
-        filePattern: `${testDir}/large.js`,
-      });
-
-      expect(results).toHaveLength(1);
-      expect(results[0].matches).toHaveLength(1000);
     });
   });
 });

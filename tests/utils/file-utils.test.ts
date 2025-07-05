@@ -32,215 +32,391 @@ describe('File Utils', () => {
   });
 
   describe('searchFiles', () => {
-    test('should find all files with default pattern', async () => {
-      const files = await searchFiles();
-      expect(files).toBeInstanceOf(Array);
-      expect(files.length).toBeGreaterThan(0);
-      // Should exclude node_modules, dist, .git
-      expect(files.some(f => f.includes('node_modules'))).toBe(false);
-      expect(files.some(f => f.includes('dist'))).toBe(false);
-      expect(files.some(f => f.includes('.git'))).toBe(false);
-    });
+    const testCases = [
+      {
+        name: 'should find all files with default pattern',
+        pattern: undefined,
+        expected: {
+          isArray: true,
+          lengthGreaterThan: 0,
+          excludes: ['node_modules', 'dist', '.git'],
+        },
+      },
+      {
+        name: 'should find files with specific glob pattern',
+        pattern: `${testDir}/**/*.js`,
+        expected: {
+          lengthGreaterThanOrEqual: 2,
+          allEndWith: '.js',
+        },
+      },
+      {
+        name: 'should find files with multiple extensions',
+        pattern: `${testDir}/**/*.{js,ts}`,
+        expected: {
+          lengthGreaterThanOrEqual: 3,
+          hasJs: true,
+          hasTs: true,
+        },
+      },
+      {
+        name: 'should handle directory patterns correctly',
+        pattern: testDir,
+        expected: {
+          lengthGreaterThan: 0,
+          allStartWith: testDir,
+        },
+      },
+      {
+        name: 'should handle directory with trailing slash',
+        pattern: `${testDir}/`,
+        expected: {
+          lengthGreaterThan: 0,
+          allStartWith: testDir,
+        },
+      },
+      {
+        name: 'should return empty array for non-existent patterns',
+        pattern: 'non-existent/**/*.xyz',
+        expected: {
+          length: 0,
+        },
+      },
+      {
+        name: 'should handle patterns with special characters',
+        pattern: `${testDir}/**/*file*.js`,
+        expected: {
+          lengthGreaterThan: 0,
+          allIncludeAndEndWith: ['file', '.js'],
+        },
+      },
+      {
+        name: 'should exclude ignored directories',
+        pattern: undefined,
+        expected: {
+          excludes: ['node_modules', 'dist', '.git'],
+        },
+      },
+    ];
 
-    test('should find files with specific glob pattern', async () => {
-      const files = await searchFiles(`${testDir}/**/*.js`);
-      expect(files.length).toBeGreaterThanOrEqual(2); // At least file1.js, nested/file4.js
-      expect(files.every(f => f.endsWith('.js'))).toBe(true);
-    });
+    testCases.forEach(({ name, pattern, expected }) => {
+      test(name, async () => {
+        const files = await searchFiles(pattern);
 
-    test('should find files with multiple extensions', async () => {
-      const files = await searchFiles(`${testDir}/**/*.{js,ts}`);
-      expect(files.length).toBeGreaterThanOrEqual(3); // At least js and ts files
-      expect(files.some(f => f.endsWith('.js'))).toBe(true);
-      expect(files.some(f => f.endsWith('.ts'))).toBe(true);
-    });
+        if (expected.isArray) {
+          expect(files).toBeInstanceOf(Array);
+        }
 
-    test('should handle directory patterns correctly', async () => {
-      const files = await searchFiles(testDir);
-      expect(files.length).toBeGreaterThan(0);
-      expect(files.every(f => f.startsWith(testDir))).toBe(true);
-    });
+        if (expected.length !== undefined) {
+          expect(files).toHaveLength(expected.length);
+        }
 
-    test('should handle directory with trailing slash', async () => {
-      const files = await searchFiles(`${testDir}/`);
-      expect(files.length).toBeGreaterThan(0);
-      expect(files.every(f => f.startsWith(testDir))).toBe(true);
-    });
+        if (expected.lengthGreaterThan !== undefined) {
+          expect(files.length).toBeGreaterThan(expected.lengthGreaterThan);
+        }
 
-    test('should return empty array for non-existent patterns', async () => {
-      const files = await searchFiles('non-existent/**/*.xyz');
-      expect(files).toHaveLength(0);
-    });
+        if (expected.lengthGreaterThanOrEqual !== undefined) {
+          expect(files.length).toBeGreaterThanOrEqual(expected.lengthGreaterThanOrEqual);
+        }
 
-    test('should handle patterns with special characters', async () => {
-      const files = await searchFiles(`${testDir}/**/*file*.js`);
-      expect(files.length).toBeGreaterThan(0);
-      expect(files.every(f => f.includes('file') && f.endsWith('.js'))).toBe(
-        true
-      );
-    });
+        if (expected.excludes) {
+          expected.excludes.forEach(exclude => {
+            expect(files.some(f => f.includes(exclude))).toBe(false);
+          });
+        }
 
-    test('should exclude ignored directories', async () => {
-      // Test with default pattern which should exclude node_modules
-      const defaultFiles = await searchFiles();
-      expect(defaultFiles.some(f => f.includes('node_modules'))).toBe(false);
-      expect(defaultFiles.some(f => f.includes('dist'))).toBe(false);
-      expect(defaultFiles.some(f => f.includes('.git'))).toBe(false);
+        if (expected.allEndWith) {
+          expect(files.every(f => f.endsWith(expected.allEndWith))).toBe(true);
+        }
+
+        if (expected.hasJs) {
+          expect(files.some(f => f.endsWith('.js'))).toBe(true);
+        }
+
+        if (expected.hasTs) {
+          expect(files.some(f => f.endsWith('.ts'))).toBe(true);
+        }
+
+        if (expected.allStartWith) {
+          expect(files.every(f => f.startsWith(expected.allStartWith))).toBe(true);
+        }
+
+        if (expected.allIncludeAndEndWith) {
+          const [include, endWith] = expected.allIncludeAndEndWith;
+          expect(files.every(f => f.includes(include) && f.endsWith(endWith))).toBe(true);
+        }
+      });
     });
   });
 
   describe('readFileContent', () => {
-    test('should read file content correctly', () => {
-      const content = readFileContent(`${testDir}/file1.js`);
-      expect(content).toBe('console.log("file1");');
-    });
+    const testCases = [
+      {
+        name: 'should read file content correctly',
+        setupFn: null,
+        filePath: `${testDir}/file1.js`,
+        expected: {
+          content: 'console.log("file1");',
+        },
+      },
+      {
+        name: 'should handle UTF-8 content correctly',
+        setupFn: () => {
+          const testContent = 'Hello 世界 🌍';
+          writeFileSync(`${testDir}/utf8.txt`, testContent, 'utf-8');
+          return testContent;
+        },
+        filePath: `${testDir}/utf8.txt`,
+        expected: {
+          contentFromSetup: true,
+        },
+      },
+      {
+        name: 'should throw error for non-existent file',
+        setupFn: null,
+        filePath: 'non-existent-file.txt',
+        expected: {
+          shouldThrow: /Failed to read file/,
+        },
+      },
+      {
+        name: 'should handle empty files',
+        setupFn: () => {
+          writeFileSync(`${testDir}/empty.txt`, '');
+        },
+        filePath: `${testDir}/empty.txt`,
+        expected: {
+          content: '',
+        },
+      },
+      {
+        name: 'should handle large files',
+        setupFn: () => {
+          const largeContent = 'x'.repeat(10000);
+          writeFileSync(`${testDir}/large.txt`, largeContent);
+          return largeContent;
+        },
+        filePath: `${testDir}/large.txt`,
+        expected: {
+          contentFromSetup: true,
+          length: 10000,
+        },
+      },
+      {
+        name: 'should preserve line endings',
+        setupFn: () => {
+          const contentWithLineEndings = 'line1\\nline2\\r\\nline3\\n';
+          writeFileSync(`${testDir}/lineendings.txt`, contentWithLineEndings);
+          return contentWithLineEndings;
+        },
+        filePath: `${testDir}/lineendings.txt`,
+        expected: {
+          contentFromSetup: true,
+        },
+      },
+    ];
 
-    test('should handle UTF-8 content correctly', () => {
-      const testContent = 'Hello 世界 🌍';
-      writeFileSync(`${testDir}/utf8.txt`, testContent, 'utf-8');
+    testCases.forEach(({ name, setupFn, filePath, expected }) => {
+      test(name, () => {
+        let setupResult = null;
+        if (setupFn) {
+          setupResult = setupFn();
+        }
 
-      const content = readFileContent(`${testDir}/utf8.txt`);
-      expect(content).toBe(testContent);
-    });
+        if (expected.shouldThrow) {
+          expect(() => {
+            readFileContent(filePath);
+          }).toThrow(expected.shouldThrow);
+        } else {
+          const content = readFileContent(filePath);
 
-    test('should throw error for non-existent file', () => {
-      expect(() => {
-        readFileContent('non-existent-file.txt');
-      }).toThrow(/Failed to read file/);
-    });
+          if (expected.content !== undefined) {
+            expect(content).toBe(expected.content);
+          }
 
-    test('should handle empty files', () => {
-      writeFileSync(`${testDir}/empty.txt`, '');
-      const content = readFileContent(`${testDir}/empty.txt`);
-      expect(content).toBe('');
-    });
+          if (expected.contentFromSetup && setupResult) {
+            expect(content).toBe(setupResult);
+          }
 
-    test('should handle large files', () => {
-      const largeContent = 'x'.repeat(10000);
-      writeFileSync(`${testDir}/large.txt`, largeContent);
-
-      const content = readFileContent(`${testDir}/large.txt`);
-      expect(content).toBe(largeContent);
-      expect(content.length).toBe(10000);
-    });
-
-    test('should preserve line endings', () => {
-      const contentWithLineEndings = 'line1\nline2\r\nline3\n';
-      writeFileSync(`${testDir}/lineendings.txt`, contentWithLineEndings);
-
-      const content = readFileContent(`${testDir}/lineendings.txt`);
-      expect(content).toBe(contentWithLineEndings);
+          if (expected.length !== undefined) {
+            expect(content.length).toBe(expected.length);
+          }
+        }
+      });
     });
   });
 
   describe('writeFileContent', () => {
-    test('should write file content correctly', () => {
-      const testContent = 'test content';
-      writeFileContent(`${testDir}/write-test.txt`, testContent);
+    const testCases = [
+      {
+        name: 'should write file content correctly',
+        filePath: `${testDir}/write-test.txt`,
+        content: 'test content',
+        expected: {
+          contentMatches: true,
+        },
+      },
+      {
+        name: 'should overwrite existing files',
+        filePath: `${testDir}/overwrite-test.txt`,
+        content: 'new content',
+        setupFn: () => {
+          writeFileContent(`${testDir}/overwrite-test.txt`, 'original');
+        },
+        expected: {
+          contentMatches: true,
+        },
+      },
+      {
+        name: 'should handle UTF-8 content correctly',
+        filePath: `${testDir}/utf8-write.txt`,
+        content: 'Hello 世界 🌍',
+        expected: {
+          contentMatches: true,
+        },
+      },
+      {
+        name: 'should create nested directories if needed',
+        filePath: `${testDir}/deep/nested/file.txt`,
+        content: 'nested content',
+        expected: {
+          shouldThrow: /Failed to write file/,
+        },
+        note: 'writeFileContent doesn\'t create directories',
+      },
+      {
+        name: 'should throw error for invalid paths',
+        filePath: '/invalid/path/that/does/not/exist.txt',
+        content: 'content',
+        expected: {
+          shouldThrow: /Failed to write file/,
+        },
+      },
+      {
+        name: 'should handle empty content',
+        filePath: `${testDir}/empty-write.txt`,
+        content: '',
+        expected: {
+          contentMatches: true,
+        },
+      },
+      {
+        name: 'should handle large content',
+        filePath: `${testDir}/large-write.txt`,
+        content: 'x'.repeat(50000),
+        expected: {
+          contentMatches: true,
+          length: 50000,
+        },
+      },
+      {
+        name: 'should preserve line endings',
+        filePath: `${testDir}/lineendings-write.txt`,
+        content: 'line1\\nline2\\r\\nline3\\n',
+        expected: {
+          contentMatches: true,
+        },
+      },
+    ];
 
-      const readContent = readFileSync(`${testDir}/write-test.txt`, 'utf-8');
-      expect(readContent).toBe(testContent);
-    });
+    testCases.forEach(({ name, filePath, content, setupFn, expected, note }) => {
+      test(name, () => {
+        if (setupFn) {
+          setupFn();
+        }
 
-    test('should overwrite existing files', () => {
-      const originalContent = 'original';
-      const newContent = 'new content';
+        if (expected.shouldThrow) {
+          expect(() => {
+            writeFileContent(filePath, content);
+          }).toThrow(expected.shouldThrow);
+        } else {
+          writeFileContent(filePath, content);
 
-      writeFileContent(`${testDir}/overwrite-test.txt`, originalContent);
-      writeFileContent(`${testDir}/overwrite-test.txt`, newContent);
+          if (expected.contentMatches) {
+            const readContent = readFileSync(filePath, 'utf-8');
+            expect(readContent).toBe(content);
 
-      const readContent = readFileSync(
-        `${testDir}/overwrite-test.txt`,
-        'utf-8'
-      );
-      expect(readContent).toBe(newContent);
-    });
-
-    test('should handle UTF-8 content correctly', () => {
-      const testContent = 'Hello 世界 🌍';
-      writeFileContent(`${testDir}/utf8-write.txt`, testContent);
-
-      const readContent = readFileSync(`${testDir}/utf8-write.txt`, 'utf-8');
-      expect(readContent).toBe(testContent);
-    });
-
-    test('should create nested directories if needed', () => {
-      const nestedPath = `${testDir}/deep/nested/file.txt`;
-      const testContent = 'nested content';
-
-      // This should NOT work as writeFileContent doesn't create directories
-      expect(() => {
-        writeFileContent(nestedPath, testContent);
-      }).toThrow(/Failed to write file/);
-    });
-
-    test('should throw error for invalid paths', () => {
-      expect(() => {
-        writeFileContent('/invalid/path/that/does/not/exist.txt', 'content');
-      }).toThrow(/Failed to write file/);
-    });
-
-    test('should handle empty content', () => {
-      writeFileContent(`${testDir}/empty-write.txt`, '');
-      const readContent = readFileSync(`${testDir}/empty-write.txt`, 'utf-8');
-      expect(readContent).toBe('');
-    });
-
-    test('should handle large content', () => {
-      const largeContent = 'x'.repeat(50000);
-      writeFileContent(`${testDir}/large-write.txt`, largeContent);
-
-      const readContent = readFileSync(`${testDir}/large-write.txt`, 'utf-8');
-      expect(readContent).toBe(largeContent);
-      expect(readContent.length).toBe(50000);
-    });
-
-    test('should preserve line endings', () => {
-      const contentWithLineEndings = 'line1\nline2\r\nline3\n';
-      writeFileContent(
-        `${testDir}/lineendings-write.txt`,
-        contentWithLineEndings
-      );
-
-      const readContent = readFileSync(
-        `${testDir}/lineendings-write.txt`,
-        'utf-8'
-      );
-      expect(readContent).toBe(contentWithLineEndings);
+            if (expected.length !== undefined) {
+              expect(readContent.length).toBe(expected.length);
+            }
+          }
+        }
+      });
     });
   });
 
   describe('integration', () => {
-    test('should work together for read-modify-write operations', () => {
-      const originalContent = 'const oldValue = 42;';
-      writeFileContent(`${testDir}/integration.js`, originalContent);
+    const testCases = [
+      {
+        name: 'should work together for read-modify-write operations',
+        setupFn: () => {
+          const originalContent = 'const oldValue = 42;';
+          writeFileContent(`${testDir}/integration.js`, originalContent);
+          return originalContent;
+        },
+        testFn: () => {
+          const content = readFileContent(`${testDir}/integration.js`);
+          const modifiedContent = content.replace('oldValue', 'newValue');
+          writeFileContent(`${testDir}/integration.js`, modifiedContent);
+          return readFileContent(`${testDir}/integration.js`);
+        },
+        expected: {
+          finalContent: 'const newValue = 42;',
+        },
+      },
+      {
+        name: 'should handle multiple file operations',
+        setupFn: () => {
+          const files = ['test1.js', 'test2.js', 'test3.js'];
+          const content = 'test content';
+          
+          // Write multiple files
+          files.forEach(file => {
+            writeFileContent(`${testDir}/${file}`, content);
+          });
+          
+          return { files, content };
+        },
+        testFn: async (setupResult) => {
+          const { files, content } = setupResult;
+          
+          // Read them back
+          const readResults = files.map(file => {
+            return readFileContent(`${testDir}/${file}`);
+          });
+          
+          // Verify with searchFiles
+          const foundFiles = await searchFiles(`${testDir}/test*.js`);
+          
+          return { readResults, foundFiles, content };
+        },
+        expected: {
+          checkMultipleFiles: true,
+        },
+      },
+    ];
 
-      const content = readFileContent(`${testDir}/integration.js`);
-      const modifiedContent = content.replace('oldValue', 'newValue');
-      writeFileContent(`${testDir}/integration.js`, modifiedContent);
+    testCases.forEach(({ name, setupFn, testFn, expected }) => {
+      test(name, async () => {
+        const setupResult = setupFn();
+        const testResult = await testFn(setupResult);
 
-      const finalContent = readFileContent(`${testDir}/integration.js`);
-      expect(finalContent).toBe('const newValue = 42;');
-    });
+        if (expected.finalContent) {
+          expect(testResult).toBe(expected.finalContent);
+        }
 
-    test('should handle multiple file operations', async () => {
-      const files = ['test1.js', 'test2.js', 'test3.js'];
-      const content = 'test content';
-
-      // Write multiple files
-      files.forEach(file => {
-        writeFileContent(`${testDir}/${file}`, content);
+        if (expected.checkMultipleFiles) {
+          const { readResults, foundFiles, content } = testResult;
+          
+          // Check that all files were read correctly
+          readResults.forEach(readContent => {
+            expect(readContent).toBe(content);
+          });
+          
+          // Check that searchFiles found all files
+          expect(foundFiles).toHaveLength(3);
+        }
       });
-
-      // Read them back
-      files.forEach(file => {
-        const readContent = readFileContent(`${testDir}/${file}`);
-        expect(readContent).toBe(content);
-      });
-
-      // Verify with searchFiles
-      const foundFiles = await searchFiles(`${testDir}/test*.js`);
-      expect(foundFiles).toHaveLength(3);
     });
   });
 });
